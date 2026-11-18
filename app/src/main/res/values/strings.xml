@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tavla</string>
+    <string name="play">Oyna</string>
+    <string name="level_title">Zorluk seç</string>
+    <string name="level_easy">Kolay</string>
+    <string name="level_medium">Orta</string>
+    <string name="level_hard">Zor</string>
+    <string name="stats">İstatistikler</string>
+    <string name="settings">Ayarlar</string>
+    <string name="go_pro">Pro\'ya Geç</string>
+    <string name="pro_active">Pro Aktif ✓</string>
+
+    <string name="roll_dice">Zar At</string>
+    <string name="undo">Geri Al</string>
+    <string name="hint">İpucu</string>
+    <string name="you">Sen</string>
+    <string name="cpu">Bilgisayar</string>
+    <string name="pip_fmt">Mesafe %1$d  •  Dışarı %2$d/15</string>
+    <string name="tap_to_roll">Zar atmak için dokun veya telefonu salla</string>
+    <string name="tap_to_roll_noshake">Zar atmak için dokun</string>
+    <string name="your_turn">Sıra sende</string>
+    <string name="cpu_thinking">Bilgisayar oynuyor…</string>
+    <string name="no_moves">Oynanacak hamle yok, sıra geçti</string>
+    <string name="opening_you">Açılış zarını sen kazandın</string>
+    <string name="opening_cpu">Açılış zarını bilgisayar kazandı</string>
+    <string name="win_title">Tebrikler, kazandın!</string>
+    <string name="lose_title">Bu sefer bilgisayar kazandı</string>
+    <string name="gammon_note">Mars ile!</string>
+    <string name="new_game">Yeni Oyun</string>
+    <string name="menu">Menü</string>
+    <string name="dice_fair_title">Zar istatistiği</string>
+    <string name="dice_fair_note">Zarlar gerçek rastgele atılır. Hiçbir tarafa avantaj verilmez.</string>
+    <string name="dice_doubles_fmt">Çift: %1$d  •  Ortalama atış: %2$s</string>
+    <string name="legend_you">Sen</string>
+    <string name="legend_cpu">Bilgisayar</string>
+    <string name="hint_none">Önerilecek hamle yok</string>
+    <string name="need_credit_title">Hakkın bitti</string>
+    <string name="need_credit_msg">Reklam izleyerek 3 hak kazanabilirsin. Pro sürümde sınırsız.</string>
+    <string name="watch_ad">Reklam İzle</string>
+    <string name="cancel">Vazgeç</string>
+    <string name="credits_earned">3 hak kazandın!</string>
+    <string name="ad_not_ready">Reklam şu an hazır değil, biraz sonra tekrar dene</string>
+    <string name="exit_title">Oyundan çıkılsın mı?</string>
+    <string name="exit_msg">Oyun kaydedilmez.</string>
+    <string name="yes">Evet</string>
+    <string name="no">Hayır</string>
+    <string name="credits_fmt">Hak: %1$d</string>
+
+    <string name="stats_games">Oynanan oyun</string>
+    <string name="stats_wins">Kazanılan</string>
+    <string name="stats_losses">Kaybedilen</string>
+    <string name="stats_winrate">Kazanma oranı</string>
+    <string name="stats_streak">Güncel seri</string>
+    <string name="stats_best_streak">En iyi seri</string>
+    <string name="stats_gammons">Mars ile kazanılan</string>
+    <string name="stats_by_level">Seviyeye göre kazanma</string>
+    <string name="stats_dice_title">Tüm oyunlardaki zar dağılımı</string>
+    <string name="stats_locked">Ayrıntılı istatistikler Pro sürümde</string>
+
+    <string name="settings_sound">Ses</string>
+    <string name="settings_vibration">Titreşim</string>
+    <string name="settings_shake">Telefonu sallayarak zar at</string>
+    <string name="settings_theme">Tahta teması</string>
+    <string name="theme_classic">Klasik Ahşap</string>
+    <string name="theme_dark">Koyu</string>
+    <string name="theme_green">Yeşil Kumaş</string>
+    <string name="theme_blue">Mavi</string>
+    <string name="theme_gold">Siyah Altın</string>
+    <string name="pro_only">Pro</string>
+    <string name="pro_locked_theme">Bu tema Pro sürümde</string>
+
+    <string name="pro_title">Tavla Pro</string>
+    <string name="pro_features">• Reklamsız oyun\n• Sınırsız ipucu ve geri alma\n• 4 ek tahta teması\n• Ayrıntılı istatistikler\n\nTek seferlik ödeme, abonelik yok.</string>
+    <string name="pro_buy_fmt">Satın Al (%1$s)</string>
+    <string name="pro_buy">Satın Al</string>
+    <string name="pro_restore">Satın alımı geri yükle</string>
+    <string name="pro_thanks">Pro etkinleştirildi, teşekkürler!</string>
+    <string name="pro_error">Satın alma şu an kullanılamıyor</string>
+    <string name="close">Kapat</string>
+    <string name="ok">Tamam</string>
+</resources>

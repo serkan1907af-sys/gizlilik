@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Backgammon</string>
+    <string name="play">Play</string>
+    <string name="level_title">Choose difficulty</string>
+    <string name="level_easy">Easy</string>
+    <string name="level_medium">Medium</string>
+    <string name="level_hard">Hard</string>
+    <string name="stats">Statistics</string>
+    <string name="settings">Settings</string>
+    <string name="go_pro">Go Pro</string>
+    <string name="pro_active">Pro Active ✓</string>
+
+    <string name="roll_dice">Roll</string>
+    <string name="undo">Undo</string>
+    <string name="hint">Hint</string>
+    <string name="you">You</string>
+    <string name="cpu">Computer</string>
+    <string name="pip_fmt">Pips %1$d  •  Off %2$d/15</string>
+    <string name="tap_to_roll">Tap or shake your phone to roll</string>
+    <string name="tap_to_roll_noshake">Tap to roll</string>
+    <string name="your_turn">Your turn</string>
+    <string name="cpu_thinking">Computer is playing…</string>
+    <string name="no_moves">No legal moves, turn skipped</string>
+    <string name="opening_you">You won the opening roll</string>
+    <string name="opening_cpu">The computer won the opening roll</string>
+    <string name="win_title">You won!</string>
+    <string name="lose_title">The computer won this time</string>
+    <string name="gammon_note">With a gammon!</string>
+    <string name="new_game">New Game</string>
+    <string name="menu">Menu</string>
+    <string name="dice_fair_title">Dice statistics</string>
+    <string name="dice_fair_note">Dice are truly random. Nobody gets an advantage.</string>
+    <string name="dice_doubles_fmt">Doubles: %1$d  •  Average roll: %2$s</string>
+    <string name="legend_you">You</string>
+    <string name="legend_cpu">Computer</string>
+    <string name="hint_none">No move to suggest</string>
+    <string name="need_credit_title">Out of credits</string>
+    <string name="need_credit_msg">Watch an ad to get 3 credits. Unlimited with Pro.</string>
+    <string name="watch_ad">Watch Ad</string>
+    <string name="cancel">Cancel</string>
+    <string name="credits_earned">You got 3 credits!</string>
+    <string name="ad_not_ready">Ad not ready, try again in a moment</string>
+    <string name="exit_title">Leave the game?</string>
+    <string name="exit_msg">The game will not be saved.</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="credits_fmt">Credits: %1$d</string>
+
+    <string name="stats_games">Games played</string>
+    <string name="stats_wins">Wins</string>
+    <string name="stats_losses">Losses</string>
+    <string name="stats_winrate">Win rate</string>
+    <string name="stats_streak">Current streak</string>
+    <string name="stats_best_streak">Best streak</string>
+    <string name="stats_gammons">Wins by gammon</string>
+    <string name="stats_by_level">Wins by difficulty</string>
+    <string name="stats_dice_title">Dice distribution, all games</string>
+    <string name="stats_locked">Detailed statistics are in Pro</string>
+
+    <string name="settings_sound">Sound</string>
+    <string name="settings_vibration">Vibration</string>
+    <string name="settings_shake">Shake phone to roll</string>
+    <string name="settings_theme">Board theme</string>
+    <string name="theme_classic">Classic Wood</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_green">Green Felt</string>
+    <string name="theme_blue">Blue</string>
+    <string name="theme_gold">Black Gold</string>
+    <string name="pro_only">Pro</string>
+    <string name="pro_locked_theme">This theme is in Pro</string>
+
+    <string name="pro_title">Backgammon Pro</string>
+    <string name="pro_features">• No ads\n• Unlimited hints and undo\n• 4 extra board themes\n• Detailed statistics\n\nOne-time payment, no subscription.</string>
+    <string name="pro_buy_fmt">Buy (%1$s)</string>
+    <string name="pro_buy">Buy</string>
+    <string name="pro_restore">Restore purchase</string>
+    <string name="pro_thanks">Pro activated, thank you!</string>
+    <string name="pro_error">Purchase is not available right now</string>
+    <string name="close">Close</string>
+    <string name="ok">OK</string>
+</resources>

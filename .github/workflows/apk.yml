@@ -1,0 +1,55 @@
+name: Tavla APK olustur
+
+on:
+  push:
+    branches: [ tavla ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+      - name: Imza anahtari hazirla
+        env:
+          KS_B64: ${{ secrets.TAVLA_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.TAVLA_KS_PASS }}
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/tavla.jks"
+            echo "TAVLA_KS_PASS=$KS_PASS" >> "$GITHUB_ENV"
+            echo "Kalici anahtar kullaniliyor"
+          else
+            PASS="gecici$(date +%s)"
+            keytool -genkeypair -keystore "$RUNNER_TEMP/tavla.jks" -storepass "$PASS" -keypass "$PASS" -alias tavla -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Tavla Test, O=Tavla, C=TR"
+            echo "TAVLA_KS_PASS=$PASS" >> "$GITHUB_ENV"
+            echo "Gecici (deneme) anahtar uretildi"
+          fi
+          echo "TAVLA_KS_PATH=$RUNNER_TEMP/tavla.jks" >> "$GITHUB_ENV"
+      - name: APK derle
+        run: gradle assembleRelease --no-daemon --stacktrace
+      - name: APK'yi yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tavla-apk
+          path: app/build/outputs/apk/release/app-release.apk
+      - name: APK'yi tavla-apk dalina koy
+        run: |
+          mkdir /tmp/cikti && cp app/build/outputs/apk/release/app-release.apk /tmp/cikti/Tavla.apk
+          cd /tmp/cikti
+          git init -q -b tavla-apk
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add Tavla.apk
+          git commit -qm "APK ${{ github.sha }}"
+          for i in 1 2 3 4 5; do git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" tavla-apk && break; sleep 20; done
