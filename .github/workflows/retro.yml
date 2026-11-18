@@ -1,0 +1,98 @@
+name: Retro Oyun APK olustur
+
+on:
+  push:
+    branches: [ retro ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Oyun motorlarinin kaynaklarini indir
+        run: |
+          git clone --depth 1 https://github.com/libretro/libretro-prboom.git "$RUNNER_TEMP/prboom"
+          git clone --depth 1 https://github.com/libretro/tyrquake.git "$RUNNER_TEMP/tyrquake"
+
+      - name: Freedoom ve motor verisini indir
+        run: |
+          mkdir -p app/src/main/assets
+          curl -fsSL -o "$RUNNER_TEMP/freedoom.zip" https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip
+          unzip -q "$RUNNER_TEMP/freedoom.zip" -d "$RUNNER_TEMP/freedoom"
+          cp "$RUNNER_TEMP/freedoom/freedoom-0.13.0/freedoom1.wad" app/src/main/assets/freedoom1.wad
+          cp "$RUNNER_TEMP/freedoom/freedoom-0.13.0/COPYING.txt" app/src/main/assets/FREEDOOM-COPYING.txt
+          cp "$RUNNER_TEMP/prboom/prboom.wad" app/src/main/assets/prboom.wad
+          ls -la app/src/main/assets
+
+      - name: Native kutuphaneleri derle (NDK)
+        run: |
+          set -e
+          NDK="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-$(ls -d "${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"/ndk/* | sort -V | tail -1)}}"
+          echo "NDK: $NDK"
+          OUT="$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a"
+          mkdir -p "$OUT"
+          COMMON="APP_ABI=arm64-v8a APP_PLATFORM=android-24 APP_SUPPORT_FLEXIBLE_PAGE_SIZES=true"
+
+          echo "::group::PrBoom (Doom)"
+          "$NDK/ndk-build" -C "$RUNNER_TEMP/prboom/jni" $COMMON -j4
+          cp "$RUNNER_TEMP/prboom/libs/arm64-v8a/libretro.so" "$OUT/libprboom_libretro.so"
+          echo "::endgroup::"
+
+          echo "::group::TyrQuake (Quake 1)"
+          "$NDK/ndk-build" -C "$RUNNER_TEMP/tyrquake/jni" $COMMON -j4
+          cp "$RUNNER_TEMP/tyrquake/libs/arm64-v8a/libretro.so" "$OUT/libtyrquake_libretro.so"
+          echo "::endgroup::"
+
+          echo "::group::Ana program (frontend)"
+          "$NDK/ndk-build" -C native/frontend NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk \
+            NDK_APPLICATION_MK=./Application.mk NDK_LIBS_OUT="$GITHUB_WORKSPACE/app/src/main/jniLibs" \
+            NDK_OUT="$RUNNER_TEMP/ndk-frontend" $COMMON -j4
+          echo "::endgroup::"
+
+          ls -la "$OUT"
+
+      - name: Imza anahtari hazirla
+        run: |
+          cp ci/test-key.p12 "$RUNNER_TEMP/retro.jks"
+          echo "RETRO_KS_PATH=$RUNNER_TEMP/retro.jks" >> "$GITHUB_ENV"
+          echo "RETRO_KS_PASS=retrotest123" >> "$GITHUB_ENV"
+
+      - name: APK derle
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: APK icerigini kontrol et
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          ls -la "$APK"
+          unzip -l "$APK" | grep -E "lib/arm64-v8a|assets/"
+
+      - name: APK'yi yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: RetroOyun-apk
+          path: app/build/outputs/apk/release/app-release.apk
+
+      - name: APK'yi retro-apk dalina koy
+        run: |
+          mkdir /tmp/cikti && cp app/build/outputs/apk/release/app-release.apk /tmp/cikti/RetroOyun.apk
+          cd /tmp/cikti
+          git init -q -b retro-apk
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add RetroOyun.apk
+          git commit -qm "APK ${{ github.sha }}"
+          for i in 1 2 3 4 5; do git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" retro-apk && break; sleep 20; done
