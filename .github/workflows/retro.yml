@@ -57,13 +57,19 @@ jobs:
           cp "$RUNNER_TEMP/tyrquake/libs/arm64-v8a/libretro.so" "$OUT/libtyrquake_libretro.so"
           echo "::endgroup::"
 
+          # NOT: ndk-build, cikis klasorundeki kendi uretmedigi .so dosyalarini siler.
+          # Bu yuzden ana program ayri klasore derlenir, sonra kopyalanir.
           echo "::group::Ana program (frontend)"
           "$NDK/ndk-build" -C native/frontend NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk \
-            NDK_APPLICATION_MK=./Application.mk NDK_LIBS_OUT="$GITHUB_WORKSPACE/app/src/main/jniLibs" \
+            NDK_APPLICATION_MK=./Application.mk NDK_LIBS_OUT="$RUNNER_TEMP/frontend-libs" \
             NDK_OUT="$RUNNER_TEMP/ndk-frontend" $COMMON -j4
+          cp "$RUNNER_TEMP/frontend-libs/arm64-v8a/libretrohost.so" "$OUT/libretrohost.so"
           echo "::endgroup::"
 
           ls -la "$OUT"
+          for f in libretrohost.so libprboom_libretro.so libtyrquake_libretro.so; do
+            test -s "$OUT/$f" || { echo "EKSIK: $f"; exit 1; }
+          done
 
       - name: Imza anahtari hazirla
         run: |
