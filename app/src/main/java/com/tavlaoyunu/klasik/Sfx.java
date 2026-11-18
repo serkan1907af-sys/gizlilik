@@ -48,6 +48,12 @@ public final class Sfx {
         }
     }
 
+    /** Zar tahtaya/kenara çarpınca kısa tık. */
+    public static void bounce() {
+        if (pool != null && Prefs.sound()) pool.play(sChecker, 0.8f, 0.8f, 1, 0, 1.5f);
+        buzz(8);
+    }
+
     public static void diceRoll() { play(sDice); buzz(40); }
     public static void diceLand() { play(sLand); buzz(25); }
     public static void checker() { play(sChecker); buzz(12); }

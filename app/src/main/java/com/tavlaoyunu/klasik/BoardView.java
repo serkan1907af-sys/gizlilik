@@ -85,6 +85,20 @@ public class BoardView extends View {
     private int chkSize;
     private float rollT = 0f;
 
+    // zar fiziği
+    private final float[] dX = new float[2], dY = new float[2], dVx = new float[2], dVy = new float[2];
+    private final float[] dAng = new float[2], dAngV = new float[2], dTilt = new float[2], dSpin = new float[2];
+    private final int[] dFace = {6, 3};
+    private boolean diceLanded = false;
+    private boolean holding = false;
+    private float holdX, holdY, holdVx, holdVy;
+    private long holdT;
+    private boolean pendingThrow = false;
+    private float throwX, throwY, throwVx, throwVy;
+    private boolean throwHasVel = false;
+    private long lastBounceSfx = 0;
+    private float diceS = 0f;
+
     private float pulse = 0f;
     private ValueAnimator pulseAnim;
 
@@ -124,6 +138,8 @@ public class BoardView extends View {
         hintMove = null;
         moving = false;
         rolling = false;
+        diceLanded = false;
+        holding = false;
         invalidate();
     }
 
@@ -519,23 +535,36 @@ public class BoardView extends View {
 
     // ------------------------------------------------------------ zarlar
 
+    private float diceSize() {
+        return colW * 2.3f;
+    }
+
     private void drawDiceArea(Canvas c) {
-        float s = Math.min(midBand * 0.95f, colW * 2.4f);
+        float s = diceSize();
         boolean humanSide = game.turn == Game.HUMAN;
         float cx = humanSide ? il + 10f * colW : il + 3f * colW;
         float cy = midY;
 
+        if (holding) {
+            long now = System.currentTimeMillis();
+            int f1 = (int) ((now / 90) % 6) + 1, f2 = (int) ((now / 110 + 3) % 6) + 1;
+            float j = colW * 0.06f;
+            drawDie(c, holdX - s * 0.6f + (rnd.nextFloat() - 0.5f) * j * 2, holdY + (rnd.nextFloat() - 0.5f) * j * 2,
+                    s * 1.1f, f1, false, (rnd.nextFloat() - 0.5f) * 24f, 1f);
+            drawDie(c, holdX + s * 0.6f + (rnd.nextFloat() - 0.5f) * j * 2, holdY + (rnd.nextFloat() - 0.5f) * j * 2,
+                    s * 1.1f, f2, false, (rnd.nextFloat() - 0.5f) * 24f, 1f);
+            return;
+        }
+
         if (!game.rolled && !rolling) {
             if (humanSide && !game.over) {
                 float k = 1f + 0.07f * pulse;
-                drawDie(c, cx - s * 0.62f, cy, s * k, 6, false, 0f);
-                drawDie(c, cx + s * 0.62f, cy, s * k, 3, false, 0f);
+                drawDie(c, cx - s * 0.62f, cy, s * k, 6, false, 0f, 0f);
+                drawDie(c, cx + s * 0.62f, cy, s * k, 3, false, 0f, 0f);
             }
             return;
         }
 
-        int a = rolling ? rollFaceA : game.d1;
-        int d = rolling ? rollFaceB : game.d2;
         boolean usedA = false, usedB = false;
         int remaining = 0;
         if (!rolling) {
@@ -550,53 +579,59 @@ public class BoardView extends View {
                 usedB = cnt[game.d2] > 0;
             }
         }
-        float ax = cx - s * 0.62f, bx = cx + s * 0.62f;
-        float ay = cy, by = cy, angA = 0f, angB = 0f;
-        float sc = 1f;
-        if (rolling) {
-            float inv = 1f - rollT;
-            float dir = humanSide ? 1f : -1f;
-            float fly = inv * inv * colW * 5f * dir;
-            float bounce = (float) Math.abs(Math.sin(rollT * Math.PI * 3.0)) * inv * s * 0.45f;
-            ax += fly;
-            bx += fly * 0.8f;
-            ay -= bounce;
-            by -= bounce * 0.8f;
-            angA = inv * 540f;
-            angB = -inv * 420f;
-            sc = 1f + 0.12f * (float) Math.sin(rollT * Math.PI);
+        float x0, y0, x1, y1, a0, a1;
+        int f0, f1b;
+        float lift0 = 0f, lift1 = 0f;
+        if (diceLanded || rolling) {
+            x0 = dX[0]; y0 = dY[0]; x1 = dX[1]; y1 = dY[1];
+            a0 = dAng[0]; a1 = dAng[1];
+            f0 = rolling ? dFace[0] : game.d1;
+            f1b = rolling ? dFace[1] : game.d2;
+            if (rolling) {
+                lift0 = Math.max(0f, 1f - rollT * 1.6f);
+                lift1 = lift0;
+            }
+        } else {
+            x0 = cx - s * 0.62f; y0 = cy; x1 = cx + s * 0.62f; y1 = cy;
+            a0 = a1 = 0f;
+            f0 = game.d1;
+            f1b = game.d2;
         }
-        drawDie(c, ax, ay, s * sc, a, usedA, angA);
-        drawDie(c, bx, by, s * sc, d, usedB, angB);
+        drawDie(c, x0, y0, s, f0, usedA, a0, lift0);
+        drawDie(c, x1, y1, s, f1b, usedB, a1, lift1);
         if (!rolling && game.d1 == game.d2 && remaining > 0 && remaining < 4) {
             tp.setColor(theme.accent);
             tp.setTextSize(s * 0.4f);
-            c.drawText("x" + remaining, cx, cy + s * 0.95f, tp);
+            float ly = Math.min(Math.max(y0, y1) + s * 0.95f, it + ih - 6f);
+            c.drawText("x" + remaining, (x0 + x1) / 2f, ly, tp);
         }
     }
 
-    private void drawDie(Canvas c, float cx, float cy, float s, int face, boolean dim, float angleDeg) {
+    private void drawDie(Canvas c, float cx, float cy, float s, int face, boolean dim, float angleDeg, float lift) {
         c.save();
         c.rotate(angleDeg, cx, cy);
         float h = s / 2f;
+        float so = s * (0.05f + 0.16f * lift);
         p.setStyle(Paint.Style.FILL);
         p.setColor(0x77000000);
-        p.setMaskFilter(new BlurMaskFilter(s * 0.08f, BlurMaskFilter.Blur.NORMAL));
-        rect.set(cx - h + s * 0.04f, cy - h + s * 0.08f, cx + h + s * 0.04f, cy + h + s * 0.08f);
+        p.setMaskFilter(new BlurMaskFilter(s * (0.08f + 0.08f * lift), BlurMaskFilter.Blur.NORMAL));
+        rect.set(cx - h + so * 0.5f, cy - h + so, cx + h + so * 0.5f, cy + h + so);
         c.drawRoundRect(rect, s * 0.2f, s * 0.2f, p);
         p.setMaskFilter(null);
+        float k = 1f + 0.1f * lift;
+        h = h * k;
         p.setShader(new LinearGradient(cx - h, cy - h, cx + h, cy + h,
                 dim ? 0xFFA8A8A8 : 0xFFFFFFFF, dim ? 0xFF7A7A7A : 0xFFD9D2C3, Shader.TileMode.CLAMP));
         rect.set(cx - h, cy - h, cx + h, cy + h);
-        c.drawRoundRect(rect, s * 0.2f, s * 0.2f, p);
+        c.drawRoundRect(rect, s * 0.2f * k, s * 0.2f * k, p);
         p.setShader(null);
         p.setStyle(Paint.Style.STROKE);
         p.setStrokeWidth(Math.max(1.5f, s * 0.025f));
         p.setColor(0x55000000);
-        c.drawRoundRect(rect, s * 0.2f, s * 0.2f, p);
+        c.drawRoundRect(rect, s * 0.2f * k, s * 0.2f * k, p);
         p.setStyle(Paint.Style.FILL);
-        float o = s * 0.26f;
-        float pr = s * 0.088f;
+        float o = s * 0.26f * k;
+        float pr = s * 0.088f * k;
         boolean[][] map = PIPS[Math.max(1, Math.min(6, face))];
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
@@ -633,33 +668,144 @@ public class BoardView extends View {
     /** Zar atma animasyonu; bitince 'done' çalışır. Sonuç zaten Game tarafından belirlenmiştir. */
     public void animateDice(final Runnable done) {
         rolling = true;
-        rollT = 0f;
         selectedFrom = -1;
         hintMove = null;
-        final long start = System.currentTimeMillis();
-        final long dur = 900;
-        handler.post(new Runnable() {
-            int tick = 0;
+        final boolean humanSide = game.turn == Game.HUMAN;
+        final float s = diceSize();
+        diceS = s;
+        final float zl = humanSide ? il + 7 * colW : il;
+        final float zr = humanSide ? trayLeft() : il + 6 * colW;
+        final float minX = zl + s * 0.55f, maxX = zr - s * 0.55f;
+        final float minY = it + s * 0.55f + 4, maxY = it + ih - s * 0.55f - 4;
+        final float u = colW;
 
+        float sx, sy, vx, vy;
+        if (pendingThrow) {
+            sx = Math.max(minX, Math.min(maxX, throwX));
+            sy = Math.max(minY, Math.min(maxY, throwY));
+            if (throwHasVel) {
+                vx = throwVx;
+                vy = throwVy;
+            } else {
+                vx = (humanSide ? -0.6f : 0.6f) * 22f * u;
+                vy = (humanSide ? -1f : 1f) * 22f * u;
+            }
+        } else {
+            sx = humanSide ? maxX : minX;
+            sy = humanSide ? maxY : minY;
+            float dir = 0.4f + rnd.nextFloat() * 0.5f;
+            vx = (humanSide ? -dir : dir) * 24f * u;
+            vy = (humanSide ? -1f : 1f) * (18f + rnd.nextFloat() * 10f) * u;
+        }
+        pendingThrow = false;
+        double sp = Math.hypot(vx, vy);
+        double clamped = Math.max(16f * u, Math.min(42f * u, sp));
+        if (sp > 0.001) {
+            vx *= clamped / sp;
+            vy *= clamped / sp;
+        }
+        for (int i = 0; i < 2; i++) {
+            double ang = (rnd.nextFloat() - 0.5f) * 0.5f * (i == 0 ? -1 : 1);
+            float cs = (float) Math.cos(ang), sn = (float) Math.sin(ang);
+            dVx[i] = vx * cs - vy * sn;
+            dVy[i] = vx * sn + vy * cs;
+            dX[i] = sx + (i == 0 ? -s * 0.35f : s * 0.35f);
+            dY[i] = sy + (i == 0 ? s * 0.2f : -s * 0.2f);
+            dX[i] = Math.max(minX, Math.min(maxX, dX[i]));
+            dY[i] = Math.max(minY, Math.min(maxY, dY[i]));
+            dAng[i] = rnd.nextFloat() * 360f;
+            dAngV[i] = (rnd.nextBoolean() ? 1 : -1) * (500f + rnd.nextFloat() * 500f);
+            dTilt[i] = (rnd.nextFloat() - 0.5f) * 22f;
+            dSpin[i] = 0f;
+            dFace[i] = rnd.nextInt(6) + 1;
+        }
+        rollT = 0f;
+        final long start = System.nanoTime();
+        final long[] last = {start};
+        handler.post(new Runnable() {
             @Override
             public void run() {
-                long t = System.currentTimeMillis() - start;
-                if (t >= dur) {
+                long now = System.nanoTime();
+                float dt = Math.min(0.033f, (now - last[0]) / 1e9f);
+                last[0] = now;
+                float t = (now - start) / 1e9f;
+                float damp = (float) Math.exp(-(t < 0.9f ? 1.6f : 5f) * dt);
+                boolean slow = true;
+                for (int i = 0; i < 2; i++) {
+                    dX[i] += dVx[i] * dt;
+                    dY[i] += dVy[i] * dt;
+                    dVx[i] *= damp;
+                    dVy[i] *= damp;
+                    dAng[i] += dAngV[i] * dt;
+                    dAngV[i] *= damp;
+                    boolean hit = false;
+                    if (dX[i] < minX) { dX[i] = minX; dVx[i] = Math.abs(dVx[i]) * 0.7f; hit = true; }
+                    if (dX[i] > maxX) { dX[i] = maxX; dVx[i] = -Math.abs(dVx[i]) * 0.7f; hit = true; }
+                    if (dY[i] < minY) { dY[i] = minY; dVy[i] = Math.abs(dVy[i]) * 0.7f; hit = true; }
+                    if (dY[i] > maxY) { dY[i] = maxY; dVy[i] = -Math.abs(dVy[i]) * 0.7f; hit = true; }
+                    if (hit) {
+                        dAngV[i] += (rnd.nextFloat() - 0.5f) * 600f;
+                        dFace[i] = rnd.nextInt(6) + 1;
+                        bounceSfx();
+                    }
+                    // dönerken yüz değiştir
+                    dSpin[i] += Math.abs(dAngV[i]) * dt + (float) Math.hypot(dVx[i], dVy[i]) * dt * 2f;
+                    if (dSpin[i] > 90f) {
+                        dSpin[i] = 0f;
+                        dFace[i] = rnd.nextInt(6) + 1;
+                    }
+                    double spd = Math.hypot(dVx[i], dVy[i]);
+                    if (spd > 3f * u) slow = false;
+                    if (spd < 6f * u) {
+                        // durulurken gerçek yüze ve hafif eğime yerleş
+                        dFace[i] = i == 0 ? game.d1 : game.d2;
+                        float target = Math.round(dAng[i] / 90f) * 90f + dTilt[i];
+                        dAng[i] += (target - dAng[i]) * Math.min(1f, dt * 14f);
+                        dAngV[i] *= 0.8f;
+                    }
+                }
+                // zar-zar çarpışması
+                float ddx = dX[1] - dX[0], ddy = dY[1] - dY[0];
+                float dist = (float) Math.hypot(ddx, ddy);
+                float minD = s * 0.95f;
+                if (dist < minD && dist > 0.001f) {
+                    float nx = ddx / dist, ny = ddy / dist;
+                    float push = (minD - dist) / 2f;
+                    dX[0] -= nx * push; dY[0] -= ny * push;
+                    dX[1] += nx * push; dY[1] += ny * push;
+                    float v0 = dVx[0] * nx + dVy[0] * ny, v1 = dVx[1] * nx + dVy[1] * ny;
+                    float diff = (v0 - v1) * 0.85f;
+                    if (diff > 0) {
+                        dVx[0] -= nx * diff; dVy[0] -= ny * diff;
+                        dVx[1] += nx * diff; dVy[1] += ny * diff;
+                        bounceSfx();
+                    }
+                }
+                rollT = Math.min(1f, t / 1.4f);
+                invalidate();
+                if ((t > 0.55f && slow) || t > 2.2f) {
+                    for (int i = 0; i < 2; i++) {
+                        dAng[i] = Math.round(dAng[i] / 90f) * 90f + dTilt[i];
+                        dVx[i] = dVy[i] = dAngV[i] = 0f;
+                    }
                     rolling = false;
+                    diceLanded = true;
                     rollT = 1f;
                     invalidate();
                     if (done != null) done.run();
                     return;
                 }
-                rollT = (float) t / dur;
-                if (tick++ % 4 == 0) {
-                    rollFaceA = rnd.nextInt(6) + 1;
-                    rollFaceB = rnd.nextInt(6) + 1;
-                }
-                invalidate();
                 handler.postDelayed(this, 16);
             }
         });
+    }
+
+    private void bounceSfx() {
+        long now = System.currentTimeMillis();
+        if (now - lastBounceSfx > 90) {
+            lastBounceSfx = now;
+            Sfx.bounce();
+        }
     }
 
     /** Hamle zaten Game.play ile uygulandı; taşın kaynaktan hedefe kayışını gösterir. */
@@ -721,6 +867,11 @@ public class BoardView extends View {
 
     // ------------------------------------------------------------ dokunma
 
+    private boolean canRoll() {
+        return game != null && !locked && !game.over && !moving && !rolling
+                && game.turn == Game.HUMAN && !game.rolled;
+    }
+
     private boolean canPlay() {
         return game != null && !locked && !game.over && !moving && !rolling
                 && game.turn == Game.HUMAN && game.rolled;
@@ -735,6 +886,15 @@ public class BoardView extends View {
                 downY = y;
                 dragging = false;
                 dragFrom = -1;
+                if (canRoll()) {
+                    holding = true;
+                    holdX = x;
+                    holdY = y;
+                    holdVx = holdVy = 0f;
+                    holdT = System.nanoTime();
+                    invalidate();
+                    return true;
+                }
                 if (canPlay()) {
                     int t = hitTest(x, y);
                     if (t >= 1) {
@@ -748,6 +908,17 @@ public class BoardView extends View {
                 }
                 return true;
             case MotionEvent.ACTION_MOVE:
+                if (holding) {
+                    long nt = System.nanoTime();
+                    float dts = Math.max(0.004f, (nt - holdT) / 1e9f);
+                    holdT = nt;
+                    holdVx = holdVx * 0.6f + ((x - holdX) / dts) * 0.4f;
+                    holdVy = holdVy * 0.6f + ((y - holdY) / dts) * 0.4f;
+                    holdX = x;
+                    holdY = y;
+                    invalidate();
+                    return true;
+                }
                 if (dragFrom != -1 && canPlay()) {
                     float slop = colW * 0.35f;
                     if (!dragging && Math.hypot(x - downX, y - downY) > slop) {
@@ -762,11 +933,27 @@ public class BoardView extends View {
                 }
                 return true;
             case MotionEvent.ACTION_CANCEL:
+                holding = false;
                 dragging = false;
                 dragFrom = -1;
                 invalidate();
                 return true;
             case MotionEvent.ACTION_UP:
+                if (holding) {
+                    holding = false;
+                    double sp = Math.hypot(holdVx, holdVy);
+                    boolean flick = sp > colW * 8f && Math.hypot(x - downX, y - downY) > colW * 0.6f;
+                    pendingThrow = true;
+                    throwX = x;
+                    throwY = y;
+                    throwHasVel = flick;
+                    throwVx = holdVx;
+                    throwVy = holdVy;
+                    if (listener != null) listener.onRollRequested();
+                    pendingThrow = false;
+                    invalidate();
+                    return true;
+                }
                 if (dragging) {
                     dragging = false;
                     int from = dragFrom;

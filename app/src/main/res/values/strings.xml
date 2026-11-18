@@ -17,8 +17,8 @@
     <string name="you">Sen</string>
     <string name="cpu">Bilgisayar</string>
     <string name="pip_fmt">Mesafe %1$d  •  Dışarı %2$d/15</string>
-    <string name="tap_to_roll">Zar atmak için dokun veya telefonu salla</string>
-    <string name="tap_to_roll_noshake">Zar atmak için dokun</string>
+    <string name="tap_to_roll">Zarı tut ve fırlat (ya da dokun, telefonu salla)</string>
+    <string name="tap_to_roll_noshake">Zarı tut ve fırlat (ya da dokun)</string>
     <string name="your_turn">Sıra sende</string>
     <string name="cpu_thinking">Bilgisayar oynuyor…</string>
     <string name="no_moves">Oynanacak hamle yok, sıra geçti</string>

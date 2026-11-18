@@ -17,8 +17,8 @@
     <string name="you">You</string>
     <string name="cpu">Computer</string>
     <string name="pip_fmt">Pips %1$d  •  Off %2$d/15</string>
-    <string name="tap_to_roll">Tap or shake your phone to roll</string>
-    <string name="tap_to_roll_noshake">Tap to roll</string>
+    <string name="tap_to_roll">Hold and flick to throw (or tap / shake)</string>
+    <string name="tap_to_roll_noshake">Hold and flick to throw (or tap)</string>
     <string name="your_turn">Your turn</string>
     <string name="cpu_thinking">Computer is playing…</string>
     <string name="no_moves">No legal moves, turn skipped</string>
