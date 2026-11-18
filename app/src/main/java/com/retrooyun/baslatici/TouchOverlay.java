@@ -41,6 +41,7 @@ public class TouchOverlay extends View {
     private final float d;
 
     private String kind = Games.KIND_DOOM;
+    private boolean classic = true; // Doom: tek cubuk (yuru + don), sag el serbest
     private int mode = MODE_GAME;
 
     private int stickId = -1;
@@ -64,6 +65,7 @@ public class TouchOverlay extends View {
 
     public void setKind(String k) {
         kind = k;
+        classic = Games.KIND_DOOM.equals(k);
         buildControls();
         invalidate();
     }
@@ -97,6 +99,8 @@ public class TouchOverlay extends View {
             add(true, "KOŞ", L2, MODE_GAME, ACT_NONE, w - 62 * d, h - 205 * d, 36 * d);
         } else {
             add(true, "ZIPLA", L2, MODE_GAME, ACT_NONE, w - 200 * d, h - 62 * d, 38 * d);
+            // Iki cubuk da doluyken isaret parmagiyla basilsin diye ust kosede ek ates tusu
+            add(true, "ATEŞ", R2, MODE_GAME, ACT_NONE, w - 62 * d, 62 * d, 44 * d);
         }
         float cx = w / 2f, ty = 30 * d;
         add(false, "‹ SİLAH", doom ? X : L, MODE_GAME, ACT_NONE, cx - 138 * d, ty, 0);
@@ -161,7 +165,7 @@ public class TouchOverlay extends View {
                 sx0 = sx = x;
                 sy0 = sy = y;
             }
-        } else if (lookId < 0) {
+        } else if (!classic && lookId < 0) {
             lookId = id;
             lkx0 = lkx = x;
             lky0 = lky = y;
@@ -219,6 +223,7 @@ public class TouchOverlay extends View {
         int b = 0;
         for (Ctl c : controls) if (c.pressed) b |= c.mask;
         buttons = b;
+        int nlx = 0, nly = 0;
         if (stickId >= 0) {
             float R = 70 * d;
             float dx = (sx - sx0) / R, dy = (sy - sy0) / R;
@@ -227,12 +232,20 @@ public class TouchOverlay extends View {
                 dx /= m;
                 dy /= m;
             }
-            lx = (int) (dx * 32767);
-            ly = (int) (dy * 32767);
-        } else {
-            lx = 0;
-            ly = 0;
+            nlx = (int) (dx * 32767);
+            nly = (int) (dy * 32767);
         }
+        if (classic) {
+            // Klasik Doom: tek cubuk. Yukari/asagi = ileri/geri, saga/sola = DON. Sag el serbest kalir.
+            float t = nlx / 32767f;
+            rx = (int) (Math.signum(t) * Math.pow(Math.abs(t), 1.3) * 32767);
+            ry = 0;
+            lx = 0;
+            ly = nly;
+            return;
+        }
+        lx = nlx;
+        ly = nly;
         if (lookId >= 0) {
             // Donus cubugu: parmak ne kadar uzaksa o kadar hizli doner; hafif egri ince ayar icin.
             float R = 55 * d;
@@ -292,7 +305,9 @@ public class TouchOverlay extends View {
                 cv.drawCircle(120 * d, getHeight() - 110 * d, R, stroke);
             }
             float RL = 55 * d;
-            if (lookId >= 0) {
+            if (classic) {
+                // sag taraf serbest: ates ve diger tuslar icin
+            } else if (lookId >= 0) {
                 float dx = lkx - lkx0, dy = lky - lky0;
                 float m = (float) Math.sqrt(dx * dx + dy * dy);
                 if (m > RL) {
