@@ -39,7 +39,6 @@ public class TouchOverlay extends View {
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final float d;
-    private final Object lookLock = new Object();
 
     private String kind = Games.KIND_DOOM;
     private int mode = MODE_GAME;
@@ -47,11 +46,11 @@ public class TouchOverlay extends View {
     private int stickId = -1;
     private float sx0, sy0, sx, sy;
     private int lookId = -1;
-    private float lastX, lastY, lookDx, lookDy;
+    private float lkx0, lky0, lkx, lky;
 
     /** Oyun is parcaciginin okudugu durum. */
     public volatile int buttons;
-    public volatile int lx, ly;
+    public volatile int lx, ly, rx, ry;
 
     public TouchOverlay(Context c) {
         super(c);
@@ -67,16 +66,6 @@ public class TouchOverlay extends View {
         kind = k;
         buildControls();
         invalidate();
-    }
-
-    /** Son kareden beri biriken parmak surukleme miktari (piksel): {dx, dy}. */
-    public float[] consumeLook() {
-        synchronized (lookLock) {
-            float[] r = {lookDx, lookDy};
-            lookDx = 0;
-            lookDy = 0;
-            return r;
-        }
     }
 
     private Ctl add(boolean round, String label, int mask, int mode, int act, float cx, float cy, float r) {
@@ -174,8 +163,8 @@ public class TouchOverlay extends View {
             }
         } else if (lookId < 0) {
             lookId = id;
-            lastX = x;
-            lastY = y;
+            lkx0 = lkx = x;
+            lky0 = lky = y;
         }
     }
 
@@ -184,12 +173,8 @@ public class TouchOverlay extends View {
             sx = x;
             sy = y;
         } else if (id == lookId) {
-            synchronized (lookLock) {
-                lookDx += x - lastX;
-                lookDy += y - lastY;
-            }
-            lastX = x;
-            lastY = y;
+            lkx = x;
+            lky = y;
         }
     }
 
@@ -248,6 +233,23 @@ public class TouchOverlay extends View {
             lx = 0;
             ly = 0;
         }
+        if (lookId >= 0) {
+            // Donus cubugu: parmak ne kadar uzaksa o kadar hizli doner; hafif egri ince ayar icin.
+            float R = 55 * d;
+            float dx = (lkx - lkx0) / R, dy = (lky - lky0) / R;
+            float m = (float) Math.sqrt(dx * dx + dy * dy);
+            if (m > 1f) {
+                dx /= m;
+                dy /= m;
+                m = 1f;
+            }
+            float k = m > 0f ? (float) Math.pow(m, 1.3) / m : 0f;
+            rx = (int) (dx * k * 32767);
+            ry = (int) (dy * k * 32767);
+        } else {
+            rx = 0;
+            ry = 0;
+        }
     }
 
     @Override
@@ -288,6 +290,26 @@ public class TouchOverlay extends View {
             } else {
                 stroke.setColor(0x40FFFFFF);
                 cv.drawCircle(120 * d, getHeight() - 110 * d, R, stroke);
+            }
+            float RL = 55 * d;
+            if (lookId >= 0) {
+                float dx = lkx - lkx0, dy = lky - lky0;
+                float m = (float) Math.sqrt(dx * dx + dy * dy);
+                if (m > RL) {
+                    dx = dx / m * RL;
+                    dy = dy / m * RL;
+                }
+                fill.setColor(0x24FFFFFF);
+                cv.drawCircle(lkx0, lky0, RL, fill);
+                cv.drawCircle(lkx0, lky0, RL, stroke);
+                fill.setColor(0x80FFFFFF);
+                cv.drawCircle(lkx0 + dx, lky0 + dy, 24 * d, fill);
+            } else {
+                stroke.setColor(0x40FFFFFF);
+                cv.drawCircle(getWidth() * 0.62f, getHeight() * 0.5f, RL, stroke);
+                text.setTextSize(11 * d);
+                text.setColor(0x50FFFFFF);
+                cv.drawText("DÖN", getWidth() * 0.62f, getHeight() * 0.5f + 4 * d, text);
             }
         }
     }

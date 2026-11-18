@@ -188,7 +188,7 @@ public class MainActivity extends Activity {
         if (status.getParent() != null) ((LinearLayout) status.getParent()).removeView(status);
         content.addView(status);
 
-        TextView foot = text("Kumanda: sol yarıda parmağını sürükle = yürü, sağ yarıda sürükle = etrafa bak. "
+        TextView foot = text("Kumanda: sol yarıda parmağını sürükle = yürü, sağ yarıda parmağını basılı tutup yana it = dön (ne kadar itersen o kadar hızlı)."
                 + "Bluetooth kumanda da çalışır.\n\n"
                 + "Freedoom (BSD lisanslı ücretsiz oyun) dahildir. Motorlar: PrBoom ve TyrQuake (GPL), libretro API.",
                 12, DIM, false);

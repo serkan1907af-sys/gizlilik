@@ -245,9 +245,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                     if (audio != null) audio.play();
                 }
 
-                float[] look = overlay.consumeLook();
-                int rx = pick(clamp(look[0] * LOOK_GAIN), padRx);
-                int ry = pick(clamp(look[1] * LOOK_GAIN), padRy);
+                int rx = pick(overlay.rx, padRx);
+                int ry = pick(overlay.ry, padRy);
                 int lx = pick(overlay.lx, padLx);
                 int ly = pick(overlay.ly, padLy);
                 Native.setInput(overlay.buttons | padButtons | padAxisButtons, lx, ly, rx, ry);
