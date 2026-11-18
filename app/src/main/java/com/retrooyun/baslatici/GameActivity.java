@@ -7,6 +7,9 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.hardware.input.InputManager;
+import android.content.Intent;
+import android.util.SparseArray;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioTrack;
@@ -29,8 +32,6 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     static final String EXTRA_KIND = "kind";
     static final String EXTRA_PATH = "path";
 
-    private static final float LOOK_GAIN = 900f; // parmak 1 piksel suruklenince cubuk degeri
-
     private SurfaceView surface;
     private TouchOverlay overlay;
     private TextView loading;
@@ -47,9 +48,21 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private volatile int padButtons, padAxisButtons;
     private volatile int padLx, padLy, padRx, padRy;
 
+    // ayarlar ve fiziksel tuslar
+    private Settings st;
+    private final SparseArray<String> held = new SparseArray<>(); // tus kodu -> islev
+    private volatile int keyMask, keyStrafe;
+    private InputManager inputManager;
+    private final InputManager.InputDeviceListener devListener = new InputManager.InputDeviceListener() {
+        @Override public void onInputDeviceAdded(int id) { refreshPads(); }
+        @Override public void onInputDeviceRemoved(int id) { refreshPads(); }
+        @Override public void onInputDeviceChanged(int id) { refreshPads(); }
+    };
+
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        st = Settings.load(this);
         kind = getIntent().getStringExtra(EXTRA_KIND);
         path = getIntent().getStringExtra(EXTRA_PATH);
         if (kind == null || path == null) {
@@ -105,13 +118,36 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     protected void onPause() {
         paused = true;
+        if (inputManager != null) inputManager.unregisterInputDeviceListener(devListener);
+        held.clear();
+        keyMask = 0;
+        keyStrafe = 0;
         super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        st = Settings.load(this);
+        if (overlay != null) overlay.reload();
+        inputManager = (InputManager) getSystemService(INPUT_SERVICE);
+        if (inputManager != null) inputManager.registerInputDeviceListener(devListener, null);
+        refreshPads();
         if (!dialogOpen) paused = false;
+    }
+
+    /** Kumanda bagliysa ekran tuslarini gizler (ayardan kapatilabilir). */
+    private void refreshPads() {
+        boolean any = false;
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice dv = InputDevice.getDevice(id);
+            if (dv == null || dv.isVirtual()) continue;
+            int src = dv.getSources();
+            if ((src & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+                    || (src & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) any = true;
+        }
+        final boolean hide = any && st != null && st.getb("pad.hide", true);
+        if (overlay != null) overlay.setPadHidden(hide);
     }
 
     @Override
@@ -134,9 +170,19 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         paused = true;
         dialogOpen = true;
         new AlertDialog.Builder(this)
-                .setMessage("Oyundan çıkılsın mı?\n(Oyunun kendi menüsünden kaydetmediğin ilerleme kaybolur.)")
-                .setPositiveButton("Çık", (d, w) -> finish())
-                .setNegativeButton("Devam", (d, w) -> {
+                .setTitle("Duraklatıldı")
+                .setItems(new String[]{"Devam", "Ayarlar", "Tuş yerleşimini düzenle", "Oyundan çık"}, (d, which) -> {
+                    if (which == 1) {
+                        startActivity(new Intent(this, SettingsActivity.class));
+                    } else if (which == 2) {
+                        startActivity(new Intent(this, LayoutEditorActivity.class).putExtra("kind", kind));
+                    } else if (which == 3) {
+                        new AlertDialog.Builder(this)
+                                .setMessage("Oyundan çıkılsın mı?\n(Oyunun kendi menüsünden kaydetmediğin ilerleme kaybolur.)")
+                                .setPositiveButton("Çık", (d2, w2) -> finish())
+                                .setNegativeButton("Devam", null)
+                                .show();
+                    }
                 })
                 .setOnDismissListener(d -> {
                     dialogOpen = false;
@@ -185,10 +231,6 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                 .setBufferSizeInBytes(bytes)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build();
-    }
-
-    private static int clamp(float v) {
-        return (int) Math.max(-32767f, Math.min(32767f, v));
     }
 
     private static int pick(int a, int b) {
@@ -249,7 +291,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                 int ry = pick(overlay.ry, padRy);
                 int lx = pick(overlay.lx, padLx);
                 int ly = pick(overlay.ly, padLy);
-                Native.setInput(overlay.buttons | padButtons | padAxisButtons, lx, ly, rx, ry);
+                lx = (int) Math.max(-32767, Math.min(32767, lx + keyStrafe));
+                Native.setInput(overlay.buttons | padButtons | padAxisButtons | keyMask, lx, ly, rx, ry);
                 Native.run();
 
                 if (audio != null) {
@@ -327,35 +370,69 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     // ---- kumanda (bluetooth / usb) ----
     private static int padBit(int key) {
         switch (key) {
-            case KeyEvent.KEYCODE_BUTTON_A: return TouchOverlay.B;
-            case KeyEvent.KEYCODE_BUTTON_B: return TouchOverlay.A;
-            case KeyEvent.KEYCODE_BUTTON_X: return TouchOverlay.Y;
-            case KeyEvent.KEYCODE_BUTTON_Y: return TouchOverlay.X;
-            case KeyEvent.KEYCODE_BUTTON_L1: return TouchOverlay.L;
-            case KeyEvent.KEYCODE_BUTTON_R1: return TouchOverlay.R;
-            case KeyEvent.KEYCODE_BUTTON_L2: return TouchOverlay.L2;
-            case KeyEvent.KEYCODE_BUTTON_R2: return TouchOverlay.R2;
-            case KeyEvent.KEYCODE_BUTTON_START: return TouchOverlay.START;
-            case KeyEvent.KEYCODE_BUTTON_SELECT: return TouchOverlay.SELECT;
-            case KeyEvent.KEYCODE_DPAD_UP: return TouchOverlay.UP;
-            case KeyEvent.KEYCODE_DPAD_DOWN: return TouchOverlay.DOWN;
-            case KeyEvent.KEYCODE_DPAD_LEFT: return TouchOverlay.LEFT;
-            case KeyEvent.KEYCODE_DPAD_RIGHT: return TouchOverlay.RIGHT;
+            case KeyEvent.KEYCODE_BUTTON_A: return Actions.B;
+            case KeyEvent.KEYCODE_BUTTON_B: return Actions.A;
+            case KeyEvent.KEYCODE_BUTTON_X: return Actions.Y;
+            case KeyEvent.KEYCODE_BUTTON_Y: return Actions.X;
+            case KeyEvent.KEYCODE_BUTTON_L1: return Actions.L;
+            case KeyEvent.KEYCODE_BUTTON_R1: return Actions.R;
+            case KeyEvent.KEYCODE_BUTTON_L2: return Actions.L2;
+            case KeyEvent.KEYCODE_BUTTON_R2: return Actions.R2;
+            case KeyEvent.KEYCODE_BUTTON_START: return Actions.START;
+            case KeyEvent.KEYCODE_BUTTON_SELECT: return Actions.SELECT;
+            case KeyEvent.KEYCODE_DPAD_UP: return Actions.UP;
+            case KeyEvent.KEYCODE_DPAD_DOWN: return Actions.DOWN;
+            case KeyEvent.KEYCODE_DPAD_LEFT: return Actions.LEFT;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: return Actions.RIGHT;
             default: return 0;
         }
     }
 
+    private void recomputeKeys() {
+        int m = 0, sv = 0;
+        for (int i = 0; i < held.size(); i++) {
+            String a = held.valueAt(i);
+            m |= Actions.mask(kind, a);
+            if (a.equals("sl")) sv -= 32767;
+            else if (a.equals("sr")) sv += 32767;
+        }
+        keyMask = m;
+        keyStrafe = Math.max(-32767, Math.min(32767, sv));
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
+        int code = e.getKeyCode();
+        int action = e.getAction();
+        if (code == KeyEvent.KEYCODE_BACK || (action != KeyEvent.ACTION_DOWN && action != KeyEvent.ACTION_UP))
+            return super.dispatchKeyEvent(e);
+
+        // 1) Kullanicinin atadigi tuslar (ses tuslari, kumanda dugmeleri, klavye)
+        if (action == KeyEvent.ACTION_DOWN) {
+            if (held.indexOfKey(code) >= 0) return true; // tekrar eden basis
+            String act = st.actionFor(kind, Settings.normalize(this, st, code));
+            if (act != null) {
+                held.put(code, act);
+                recomputeKeys();
+                if (act.equals("menu") && overlay != null) overlay.toggleMenu();
+                return true;
+            }
+        } else if (held.indexOfKey(code) >= 0) {
+            held.remove(code);
+            recomputeKeys();
+            return true;
+        }
+
+        // 2) Atanmamis kumanda dugmeleri: varsayilan eslestirme
         int src = e.getSource();
         boolean pad = (src & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
                 || (src & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
                 || (src & InputDevice.SOURCE_DPAD) == InputDevice.SOURCE_DPAD;
         if (pad) {
-            int bit = padBit(e.getKeyCode());
+            int bit = padBit(code);
             if (bit != 0) {
-                if (e.getAction() == KeyEvent.ACTION_DOWN) padButtons |= bit;
-                else if (e.getAction() == KeyEvent.ACTION_UP) padButtons &= ~bit;
+                if (action == KeyEvent.ACTION_DOWN) padButtons |= bit;
+                else padButtons &= ~bit;
                 return true;
             }
         }
@@ -379,12 +456,12 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             float rt = Math.max(e.getAxisValue(MotionEvent.AXIS_RTRIGGER), e.getAxisValue(MotionEvent.AXIS_GAS));
             float hx = e.getAxisValue(MotionEvent.AXIS_HAT_X), hy = e.getAxisValue(MotionEvent.AXIS_HAT_Y);
             int b = 0;
-            if (lt > 0.5f) b |= TouchOverlay.L2;
-            if (rt > 0.5f) b |= TouchOverlay.R2;
-            if (hx < -0.5f) b |= TouchOverlay.LEFT;
-            if (hx > 0.5f) b |= TouchOverlay.RIGHT;
-            if (hy < -0.5f) b |= TouchOverlay.UP;
-            if (hy > 0.5f) b |= TouchOverlay.DOWN;
+            if (lt > 0.5f) b |= Actions.L2;
+            if (rt > 0.5f) b |= Actions.R2;
+            if (hx < -0.5f) b |= Actions.LEFT;
+            if (hx > 0.5f) b |= Actions.RIGHT;
+            if (hy < -0.5f) b |= Actions.UP;
+            if (hy > 0.5f) b |= Actions.DOWN;
             padAxisButtons = b;
             return true;
         }

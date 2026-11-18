@@ -135,6 +135,8 @@ public class MainActivity extends Activity {
         content.removeAllViews();
         content.addView(text("RETRO OYUN", 28, ACCENT, true));
         content.addView(text("Doom ve Quake, tek uygulamada", 15, DIM, false));
+        content.addView(button("⚙  Ayarlar: tuşlar, dokunmatik, düzen", false,
+                v -> startActivity(new Intent(this, SettingsActivity.class))));
 
         // ---- DOOM ----
         LinearLayout doom = section("DOOM");
@@ -190,8 +192,9 @@ public class MainActivity extends Activity {
 
         TextView foot = text("Doom: sol yarıda parmağını bas ve it: yukarı/aşağı = ileri/geri, sağa/sola = dön. "
                 + "Sağ elin ateş ve diğer tuşlara serbest kalır.\n"
-                + "Quake: sol çubuk = yürü, sağ yarıda çubuk = etrafa bak; ateş için sağ üstte de bir tuş var. "
-                + "Bluetooth kumanda da çalışır.\n\n"
+                + "Quake: sol çubuk = yürü, sağ yarıda çubuk = etrafa bak.\n"
+                + "Ses tuşları varsayılan olarak ateş / kullan'dır; Ayarlar'dan değiştirebilirsin. "
+                + "Bluetooth kumanda bağlanınca ekran tuşları otomatik gizlenir.\n\n"
                 + "Freedoom (BSD lisanslı ücretsiz oyun) dahildir. Motorlar: PrBoom ve TyrQuake (GPL), libretro API.",
                 12, DIM, false);
         foot.setPadding(0, dp(22), 0, 0);

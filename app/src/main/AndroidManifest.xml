@@ -27,5 +27,17 @@
             android:process=":game"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode" />
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode" />
+
+        <activity
+            android:name=".LayoutEditorActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode" />
     </application>
 </manifest>
