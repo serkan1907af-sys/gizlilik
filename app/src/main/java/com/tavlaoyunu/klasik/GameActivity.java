@@ -35,6 +35,7 @@ public class GameActivity extends Activity implements SensorEventListener {
     private BoardView bv;
     private BoardTheme theme;
     private TextView tvCpu, tvYou, tvStatus, tvCredits;
+    private LinearLayout cardCpu, cardYou;
     private Button btnUndo, btnHint, btnRoll;
 
     private final Handler h = new Handler(Looper.getMainLooper());
@@ -59,12 +60,11 @@ public class GameActivity extends Activity implements SensorEventListener {
 
         LinearLayout root = UiKit.vertical(this);
         root.setBackgroundColor(theme.bg);
-        int pad = UiKit.dp(this, 8);
-        root.setPadding(pad, pad, pad, pad);
+        UiKit.applyInsets(root, 8);
 
-        tvCpu = UiKit.text(this, "", 14, theme.text, true);
-        tvCpu.setGravity(Gravity.CENTER);
-        root.addView(tvCpu, UiKit.lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        tvCpu = UiKit.text(this, "", 15, theme.text, true);
+        cardCpu = makeCard("🤖", tvCpu);
+        root.addView(cardCpu, UiKit.lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         bv = new BoardView(this);
         bv.setTheme(theme);
@@ -81,14 +81,18 @@ public class GameActivity extends Activity implements SensorEventListener {
         });
         root.addView(bv, UiKit.lpWeight(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        tvYou = UiKit.text(this, "", 14, theme.text, true);
-        tvYou.setGravity(Gravity.CENTER);
-        root.addView(tvYou, UiKit.lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        tvYou = UiKit.text(this, "", 15, theme.text, true);
+        cardYou = makeCard("🙂", tvYou);
+        root.addView(cardYou, UiKit.lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        tvStatus = UiKit.text(this, "", 15, theme.accent, true);
+        tvStatus = UiKit.text(this, "", 17, Color.BLACK, true);
         tvStatus.setGravity(Gravity.CENTER);
-        tvStatus.setPadding(0, UiKit.dp(this, 4), 0, UiKit.dp(this, 4));
-        root.addView(tvStatus, UiKit.lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        tvStatus.setBackground(UiKit.round(theme.accent, 22, this));
+        int sp = UiKit.dp(this, 8);
+        tvStatus.setPadding(sp * 2, sp, sp * 2, sp);
+        LinearLayout.LayoutParams slp = UiKit.lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        slp.setMargins(0, UiKit.dp(this, 6), 0, UiKit.dp(this, 2));
+        root.addView(tvStatus, slp);
 
         tvCredits = UiKit.text(this, "", 12, UiKit.MUTED, false);
         tvCredits.setGravity(Gravity.CENTER);
@@ -136,6 +140,25 @@ public class GameActivity extends Activity implements SensorEventListener {
         accel = sm == null ? null : sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         startNewGame();
+    }
+
+    private LinearLayout makeCard(String emoji, TextView label) {
+        LinearLayout card = UiKit.horizontal(this);
+        card.setBackground(UiKit.card(this, 0x44000000, 0, 0));
+        int p = UiKit.dp(this, 8);
+        card.setPadding(p * 2, p, p * 2, p);
+        TextView av = UiKit.text(this, emoji, 24, Color.WHITE, false);
+        av.setPadding(0, 0, UiKit.dp(this, 10), 0);
+        card.addView(av);
+        card.addView(label);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, UiKit.dp(this, 2), 0, UiKit.dp(this, 2));
+        card.setLayoutParams(lp);
+        return card;
+    }
+
+    private void setStatus(int res) {
+        tvStatus.setText(res);
     }
 
     // ------------------------------------------------------------ oyun akışı
@@ -188,7 +211,11 @@ public class GameActivity extends Activity implements SensorEventListener {
     }
 
     private void requestRoll() {
-        if (busy || game == null || game.over || game.turn != Game.HUMAN || game.rolled) return;
+        if (busy || game == null || game.over || game.turn != Game.HUMAN) return;
+        if (game.rolled) {
+            Toast.makeText(this, R.string.move_hint, Toast.LENGTH_SHORT).show();
+            return;
+        }
         busy = true;
         game.roll();
         updateButtons();
@@ -220,7 +247,7 @@ public class GameActivity extends Activity implements SensorEventListener {
             }, 1400);
             return;
         }
-        tvStatus.setText(R.string.your_turn);
+        tvStatus.setText(R.string.move_hint);
         maybeAutoPlay();
     }
 
@@ -269,6 +296,7 @@ public class GameActivity extends Activity implements SensorEventListener {
                     }, 350);
                 } else {
                     busy = false;
+                    tvStatus.setText(R.string.move_hint);
                     updateButtons();
                     maybeAutoPlay();
                 }
@@ -431,7 +459,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         bv.clearSelection();
         updateInfo();
         updateButtons();
-        tvStatus.setText(R.string.your_turn);
+        tvStatus.setText(R.string.move_hint);
     }
 
     private void onHint() {
@@ -454,6 +482,9 @@ public class GameActivity extends Activity implements SensorEventListener {
                 game.board.pip(Game.CPU), game.board.off[Game.CPU]));
         tvYou.setText(getString(R.string.you) + "   " + getString(R.string.pip_fmt,
                 game.board.pip(Game.HUMAN), game.board.off[Game.HUMAN]));
+        boolean humanTurn = game.turn == Game.HUMAN && !game.over;
+        cardYou.setBackground(UiKit.card(this, humanTurn ? 0x66000000 : 0x33000000, theme.accent, humanTurn ? 2 : 0));
+        cardCpu.setBackground(UiKit.card(this, !humanTurn ? 0x66000000 : 0x33000000, theme.accent, !humanTurn ? 2 : 0));
     }
 
     private void updateButtons() {
@@ -462,6 +493,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         UiKit.setEnabledLook(btnUndo, human && !busy && game.canUndo());
         UiKit.setEnabledLook(btnHint, human && !busy && game.rolled && !game.noMoves());
         UiKit.setEnabledLook(btnRoll, human && !busy && !game.rolled);
+        btnRoll.setText(human && game.rolled ? R.string.btn_move : (human || game.over ? R.string.roll_dice : R.string.btn_wait));
         if (Prefs.pro()) {
             tvCredits.setText("");
             tvCredits.setVisibility(View.GONE);

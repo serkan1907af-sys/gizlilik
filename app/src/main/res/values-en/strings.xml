@@ -11,9 +11,9 @@
     <string name="go_pro">Go Pro</string>
     <string name="pro_active">Pro Active ✓</string>
 
-    <string name="roll_dice">Roll</string>
-    <string name="undo">Undo</string>
-    <string name="hint">Hint</string>
+    <string name="roll_dice">🎲 Roll</string>
+    <string name="undo">↩ Undo</string>
+    <string name="hint">💡 Hint</string>
     <string name="you">You</string>
     <string name="cpu">Computer</string>
     <string name="pip_fmt">Pips %1$d  •  Off %2$d/15</string>
@@ -45,7 +45,10 @@
     <string name="exit_msg">The game will not be saved.</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
-    <string name="credits_fmt">Credits: %1$d</string>
+    <string name="credits_fmt">Hints / undos left: %1$d</string>
+    <string name="move_hint">Tap or drag a glowing checker</string>
+    <string name="btn_move">Your move</string>
+    <string name="btn_wait">Wait…</string>
 
     <string name="stats_games">Games played</string>
     <string name="stats_wins">Wins</string>

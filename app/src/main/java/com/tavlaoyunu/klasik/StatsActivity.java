@@ -22,6 +22,7 @@ public class StatsActivity extends Activity {
         box.setPadding(pad, pad, pad, pad);
         sv.addView(box);
         setContentView(sv);
+        UiKit.applyInsets(sv, 0);
     }
 
     @Override

@@ -11,9 +11,9 @@
     <string name="go_pro">Pro\'ya Geç</string>
     <string name="pro_active">Pro Aktif ✓</string>
 
-    <string name="roll_dice">Zar At</string>
-    <string name="undo">Geri Al</string>
-    <string name="hint">İpucu</string>
+    <string name="roll_dice">🎲 Zar At</string>
+    <string name="undo">↩ Geri Al</string>
+    <string name="hint">💡 İpucu</string>
     <string name="you">Sen</string>
     <string name="cpu">Bilgisayar</string>
     <string name="pip_fmt">Mesafe %1$d  •  Dışarı %2$d/15</string>
@@ -45,7 +45,10 @@
     <string name="exit_msg">Oyun kaydedilmez.</string>
     <string name="yes">Evet</string>
     <string name="no">Hayır</string>
-    <string name="credits_fmt">Hak: %1$d</string>
+    <string name="credits_fmt">Kalan ipucu / geri alma hakkı: %1$d</string>
+    <string name="move_hint">Parlayan bir taşa dokun ya da sürükle</string>
+    <string name="btn_move">Hamle yap</string>
+    <string name="btn_wait">Bekle…</string>
 
     <string name="stats_games">Oynanan oyun</string>
     <string name="stats_wins">Kazanılan</string>

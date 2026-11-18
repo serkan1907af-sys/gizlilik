@@ -88,6 +88,7 @@ public class ProActivity extends Activity {
         root.addView(close, cl);
 
         setContentView(root);
+        UiKit.applyInsets(root, 28);
         refreshUi();
         if (ProManager.get() != null) ProManager.get().addListener(refresh);
     }

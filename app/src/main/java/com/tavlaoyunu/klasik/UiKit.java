@@ -6,6 +6,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -78,6 +79,32 @@ public final class UiKit {
         View v = new View(c);
         v.setLayoutParams(new LinearLayout.LayoutParams(1, dp(c, heightDp)));
         return v;
+    }
+
+    /** Durum çubuğu ve gezinme çubuğunun altında kalmamak için kenar boşluğu ekler. */
+    public static void applyInsets(final View root, final int baseDp) {
+        final int base = dp(root.getContext(), baseDp);
+        root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @Override
+            public WindowInsets onApplyWindowInsets(View v, WindowInsets in) {
+                v.setPadding(base + in.getSystemWindowInsetLeft(), base + in.getSystemWindowInsetTop(),
+                        base + in.getSystemWindowInsetRight(), base + in.getSystemWindowInsetBottom());
+                return in;
+            }
+        });
+        root.requestApplyInsets();
+    }
+
+    /** Yuvarlak köşeli, isteğe bağlı çerçeveli kart arka planı. */
+    public static GradientDrawable card(Context c, int color, int strokeColor, int strokeDp) {
+        GradientDrawable g = round(color, 16, c);
+        if (strokeDp > 0) g.setStroke(dp(c, strokeDp), strokeColor);
+        return g;
+    }
+
+    /** Tıklanabilir kalır ama soluk görünür. */
+    public static void setDimmed(Button b, boolean dimmed) {
+        b.setAlpha(dimmed ? 0.45f : 1f);
     }
 
     public static final int BG = Color.parseColor("#1A0F06");

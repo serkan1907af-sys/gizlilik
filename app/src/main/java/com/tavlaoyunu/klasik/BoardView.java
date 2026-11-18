@@ -4,7 +4,12 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
@@ -69,6 +74,17 @@ public class BoardView extends View {
     private boolean hideTray = false;
     private boolean locked = false;
 
+    // sürükle-bırak
+    private int dragFrom = -1;
+    private boolean dragging = false;
+    private float dragX, dragY, downX, downY;
+
+    // önbellekler
+    private Bitmap boardBmp;
+    private final Bitmap[] chkBmp = new Bitmap[2];
+    private int chkSize;
+    private float rollT = 0f;
+
     private float pulse = 0f;
     private ValueAnimator pulseAnim;
 
@@ -113,6 +129,7 @@ public class BoardView extends View {
 
     public void setTheme(BoardTheme t) {
         theme = t;
+        buildAssets();
         invalidate();
     }
 
@@ -162,12 +179,122 @@ public class BoardView extends View {
         ih = bh - 2 * f;
         colW = iw / 13.9f;
         trayW = colW * 0.9f;
-        triH = ih * 0.40f;
+        triH = ih * 0.435f;
         midBand = ih - 2 * triH;
         midY = it + ih / 2f;
         r = Math.min(colW * 0.46f, triH / 9f);
         step = 2 * r * 0.9f;
         maxShow = Math.max(5, Math.min(10, (int) ((triH - 2 * r - 6) / step) + 1));
+        buildAssets();
+    }
+
+    private static int shade(int color, float f) {
+        int a = color >>> 24;
+        int rr = Math.min(255, Math.max(0, (int) (((color >> 16) & 255) * f)));
+        int gg = Math.min(255, Math.max(0, (int) (((color >> 8) & 255) * f)));
+        int bb = Math.min(255, Math.max(0, (int) ((color & 255) * f)));
+        return (a << 24) | (rr << 16) | (gg << 8) | bb;
+    }
+
+    /** Tahta ve taş görsellerini bir kez çizip önbelleğe alır. */
+    private void buildAssets() {
+        if (bw <= 0 || getWidth() <= 0 || getHeight() <= 0) return;
+        // --- tahta
+        boardBmp = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(boardBmp);
+        Paint q = new Paint(Paint.ANTI_ALIAS_FLAG);
+        c.drawColor(theme.bg);
+        // dış gölge
+        q.setColor(0x88000000);
+        q.setMaskFilter(new BlurMaskFilter(bw * 0.02f, BlurMaskFilter.Blur.NORMAL));
+        rect.set(bl + 2, bt + bw * 0.01f, bl + bw + 2, bt + bh + bw * 0.01f);
+        c.drawRoundRect(rect, colW * 0.35f, colW * 0.35f, q);
+        q.setMaskFilter(null);
+        // çerçeve (ahşap geçişi)
+        q.setShader(new LinearGradient(bl, bt, bl + bw, bt + bh, shade(theme.frame, 1.35f), shade(theme.frame, 0.7f), Shader.TileMode.CLAMP));
+        rect.set(bl, bt, bl + bw, bt + bh);
+        c.drawRoundRect(rect, colW * 0.35f, colW * 0.35f, q);
+        q.setShader(null);
+        // çerçeve damarları
+        Random gr = new Random(7);
+        q.setStrokeWidth(1.2f);
+        for (int i = 0; i < 160; i++) {
+            float y = bt + gr.nextFloat() * bh;
+            float x1 = bl + gr.nextFloat() * bw;
+            q.setColor(gr.nextBoolean() ? 0x14000000 : 0x10FFFFFF);
+            c.drawLine(x1, y, Math.min(bl + bw, x1 + bw * (0.1f + gr.nextFloat() * 0.4f)), y + gr.nextFloat() * 3f, q);
+        }
+        // oyun alanı (içe oyuk)
+        q.setShader(new LinearGradient(il, it, il, it + ih, shade(theme.board, 1.12f), shade(theme.board, 0.85f), Shader.TileMode.CLAMP));
+        rect.set(il, it, il + iw, it + ih);
+        c.drawRoundRect(rect, colW * 0.2f, colW * 0.2f, q);
+        q.setShader(null);
+        for (int i = 0; i < 220; i++) {
+            float y = it + gr.nextFloat() * ih;
+            float x1 = il + gr.nextFloat() * iw;
+            q.setColor(gr.nextBoolean() ? 0x0F000000 : 0x0CFFFFFF);
+            c.drawLine(x1, y, Math.min(il + iw, x1 + iw * (0.1f + gr.nextFloat() * 0.5f)), y + gr.nextFloat() * 2f, q);
+        }
+        // bar ve tepsi
+        q.setShader(new LinearGradient(il + 6 * colW, 0, il + 7 * colW, 0, shade(theme.bar, 1.25f), shade(theme.bar, 0.8f), Shader.TileMode.CLAMP));
+        rect.set(il + 6 * colW, it, il + 7 * colW, it + ih);
+        c.drawRect(rect, q);
+        q.setShader(new LinearGradient(trayLeft(), 0, il + iw, 0, shade(theme.bar, 0.8f), shade(theme.bar, 1.2f), Shader.TileMode.CLAMP));
+        rect.set(trayLeft(), it, il + iw, it + ih);
+        c.drawRect(rect, q);
+        q.setShader(null);
+        // üçgenler
+        for (int n = 1; n <= 24; n++) {
+            boolean bottom = n <= 12;
+            float x = colX(colOf(n));
+            float baseY = bottom ? it + ih : it;
+            float apexY = bottom ? it + ih - triH : it + triH;
+            int base = (n % 2 == 1) ? theme.pointA : theme.pointB;
+            q.setShader(new LinearGradient(x, baseY, x, apexY, shade(base, 0.8f), shade(base, 1.18f), Shader.TileMode.CLAMP));
+            path.reset();
+            path.moveTo(x - colW / 2f + 1.5f, baseY);
+            path.lineTo(x + colW / 2f - 1.5f, baseY);
+            path.lineTo(x, apexY);
+            path.close();
+            c.drawPath(path, q);
+        }
+        q.setShader(null);
+        // iç kenar çizgisi
+        q.setStyle(Paint.Style.STROKE);
+        q.setStrokeWidth(Math.max(2f, colW * 0.06f));
+        q.setColor(0x66000000);
+        rect.set(il, it, il + iw, it + ih);
+        c.drawRoundRect(rect, colW * 0.2f, colW * 0.2f, q);
+
+        // --- taşlar
+        chkSize = (int) Math.ceil(r * 2.6f);
+        for (int pl = 0; pl < 2; pl++) {
+            Bitmap bm = Bitmap.createBitmap(chkSize, chkSize, Bitmap.Config.ARGB_8888);
+            Canvas cc = new Canvas(bm);
+            Paint k = new Paint(Paint.ANTI_ALIAS_FLAG);
+            float cs = chkSize / 2f;
+            int fill = pl == Game.HUMAN ? theme.white : theme.black;
+            int edge = pl == Game.HUMAN ? theme.whiteEdge : theme.blackEdge;
+            k.setColor(0x77000000);
+            k.setMaskFilter(new BlurMaskFilter(r * 0.18f, BlurMaskFilter.Blur.NORMAL));
+            cc.drawCircle(cs + r * 0.06f, cs + r * 0.16f, r * 0.98f, k);
+            k.setMaskFilter(null);
+            k.setColor(edge);
+            cc.drawCircle(cs, cs, r, k);
+            k.setShader(new RadialGradient(cs - r * 0.3f, cs - r * 0.35f, r * 1.1f, shade(fill, 1.18f), shade(fill, 0.82f), Shader.TileMode.CLAMP));
+            cc.drawCircle(cs, cs, r * 0.88f, k);
+            k.setShader(null);
+            k.setStyle(Paint.Style.STROKE);
+            k.setStrokeWidth(Math.max(1.5f, r * 0.08f));
+            k.setColor(shade(edge, 1.0f));
+            k.setAlpha(170);
+            cc.drawCircle(cs, cs, r * 0.58f, k);
+            k.setStyle(Paint.Style.FILL);
+            k.setColor(0x33FFFFFF);
+            rect.set(cs - r * 0.55f, cs - r * 0.78f, cs + r * 0.35f, cs - r * 0.3f);
+            cc.drawOval(rect, k);
+            chkBmp[pl] = bm;
+        }
     }
 
     private int colOf(int n) {
@@ -217,37 +344,9 @@ public class BoardView extends View {
         if (game == null || bw <= 0) return;
         Board b = game.board;
 
-        // arka plan ve çerçeve
-        c.drawColor(theme.bg);
-        p.setStyle(Paint.Style.FILL);
-        p.setColor(theme.frame);
-        rect.set(bl, bt, bl + bw, bt + bh);
-        c.drawRoundRect(rect, colW * 0.35f, colW * 0.35f, p);
-        p.setColor(theme.board);
-        rect.set(il, it, il + iw, it + ih);
-        c.drawRoundRect(rect, colW * 0.2f, colW * 0.2f, p);
-
-        // bar ve tepsi
-        p.setColor(theme.bar);
-        rect.set(il + 6 * colW, it, il + 7 * colW, it + ih);
-        c.drawRect(rect, p);
-        rect.set(trayLeft(), it, il + iw, it + ih);
-        c.drawRect(rect, p);
-
-        // üçgenler
-        for (int n = 1; n <= 24; n++) {
-            boolean bottom = n <= 12;
-            float x = colX(colOf(n));
-            float baseY = bottom ? it + ih : it;
-            float apexY = bottom ? it + ih - triH : it + triH;
-            p.setColor((n % 2 == 1) ? theme.pointA : theme.pointB);
-            path.reset();
-            path.moveTo(x - colW / 2f + 1, baseY);
-            path.lineTo(x + colW / 2f - 1, baseY);
-            path.lineTo(x, apexY);
-            path.close();
-            c.drawPath(path, p);
-        }
+        if (boardBmp == null) buildAssets();
+        if (boardBmp != null) c.drawBitmap(boardBmp, 0, 0, null);
+        else c.drawColor(theme.bg);
 
         // hamle göstergeleri (kaynak halkaları, hedef noktalar)
         drawGuides(c);
@@ -258,6 +357,7 @@ public class BoardView extends View {
             int black = b.pts[Game.CPU][25 - n];
             if (white > 0) {
                 int cnt = (hidePlayer == Game.HUMAN && hideScreenPoint == n) ? white - 1 : white;
+                if (dragging && dragFrom == n) cnt--;
                 drawStack(c, n, Game.HUMAN, cnt);
             } else if (black > 0) {
                 int cnt = (hidePlayer == Game.CPU && hideScreenPoint == n) ? black - 1 : black;
@@ -265,7 +365,8 @@ public class BoardView extends View {
             }
         }
         // bar taşları
-        for (int k = 0; k < b.bar[Game.HUMAN]; k++) drawChecker(c, barX(), barY(Game.HUMAN, k), Game.HUMAN);
+        int hb = b.bar[Game.HUMAN] - ((dragging && dragFrom == 25) ? 1 : 0);
+        for (int k = 0; k < hb; k++) drawChecker(c, barX(), barY(Game.HUMAN, k), Game.HUMAN);
         for (int k = 0; k < b.bar[Game.CPU]; k++) drawChecker(c, barX(), barY(Game.CPU, k), Game.CPU);
         if (b.bar[Game.HUMAN] > 4) drawCount(c, barX(), barY(Game.HUMAN, 3), b.bar[Game.HUMAN]);
         if (b.bar[Game.CPU] > 4) drawCount(c, barX(), barY(Game.CPU, 3), b.bar[Game.CPU]);
@@ -280,6 +381,9 @@ public class BoardView extends View {
             float y = my0 + (my1 - my0) * mProg - (float) Math.sin(mProg * Math.PI) * r * 0.9f;
             drawChecker(c, x, y, movPlayer);
         }
+
+        // sürüklenen taş
+        if (dragging) drawChecker(c, dragX, dragY - r * 1.1f, Game.HUMAN);
 
         // zarlar
         drawDiceArea(c);
@@ -303,20 +407,9 @@ public class BoardView extends View {
     }
 
     private void drawChecker(Canvas c, float x, float y, int player) {
-        int fill = player == Game.HUMAN ? theme.white : theme.black;
-        int edge = player == Game.HUMAN ? theme.whiteEdge : theme.blackEdge;
-        p.setStyle(Paint.Style.FILL);
-        p.setColor(0x55000000);
-        c.drawCircle(x + r * 0.08f, y + r * 0.12f, r, p);
-        p.setColor(edge);
-        c.drawCircle(x, y, r, p);
-        p.setColor(fill);
-        c.drawCircle(x, y, r * 0.84f, p);
-        p.setStyle(Paint.Style.STROKE);
-        p.setStrokeWidth(Math.max(1f, r * 0.08f));
-        p.setColor(edge);
-        c.drawCircle(x, y, r * 0.55f, p);
-        p.setStyle(Paint.Style.FILL);
+        Bitmap bm = chkBmp[player];
+        if (bm == null) return;
+        c.drawBitmap(bm, x - chkSize / 2f, y - chkSize / 2f, null);
     }
 
     private void drawTray(Canvas c, int player, int count) {
@@ -344,17 +437,25 @@ public class BoardView extends View {
             for (Move m : moves) {
                 float[] xy = sourceTop(m.from);
                 if (xy == null) continue;
-                drawRing(c, xy[0], xy[1], r * (1.12f + 0.12f * pulse), theme.accent, 0.55f);
+                drawRing(c, xy[0], xy[1], r * (1.12f + 0.14f * pulse), theme.accent, 0.9f);
             }
         } else {
             float[] xy = sourceTop(selectedFrom);
             if (xy != null) drawRing(c, xy[0], xy[1], r * 1.2f, theme.accent, 1f);
             for (Move m : moves) {
                 if (m.from != selectedFrom) continue;
-                float[] t = targetSpot(m);
                 p.setStyle(Paint.Style.FILL);
-                p.setColor(withAlpha(theme.accent, 150 + (int) (60 * pulse)));
-                c.drawCircle(t[0], t[1], r * 0.62f, p);
+                p.setColor(withAlpha(theme.accent, 70 + (int) (50 * pulse)));
+                if (m.to >= 1) {
+                    triPath(m.to);
+                    c.drawPath(path, p);
+                } else {
+                    rect.set(trayLeft(), it + ih - triH, il + iw, it + ih);
+                    c.drawRect(rect, p);
+                }
+                float[] t = targetSpot(m);
+                p.setColor(withAlpha(theme.accent, 190 + (int) (50 * pulse)));
+                c.drawCircle(t[0], t[1], r * 0.5f, p);
             }
         }
         if (hintMove != null) {
@@ -365,6 +466,18 @@ public class BoardView extends View {
             p.setColor(0xCC4CAF50);
             c.drawCircle(t[0], t[1], r * 0.7f, p);
         }
+    }
+
+    private void triPath(int n) {
+        boolean bottom = n <= 12;
+        float x = colX(colOf(n));
+        float baseY = bottom ? it + ih : it;
+        float apexY = bottom ? it + ih - triH : it + triH;
+        path.reset();
+        path.moveTo(x - colW / 2f + 1.5f, baseY);
+        path.lineTo(x + colW / 2f - 1.5f, baseY);
+        path.lineTo(x, apexY);
+        path.close();
     }
 
     private void drawRing(Canvas c, float x, float y, float rad, int color, float alpha) {
@@ -407,15 +520,14 @@ public class BoardView extends View {
     // ------------------------------------------------------------ zarlar
 
     private void drawDiceArea(Canvas c) {
-        float s = Math.min(midBand * 0.70f, colW * 2.3f);
+        float s = Math.min(midBand * 0.95f, colW * 2.4f);
         boolean humanSide = game.turn == Game.HUMAN;
-        float cx = humanSide ? il + 10f * colW : il + 3f * colW; // sağ yarı merkezi 10, sol yarı merkezi 3. kolon
+        float cx = humanSide ? il + 10f * colW : il + 3f * colW;
         float cy = midY;
 
         if (!game.rolled && !rolling) {
             if (humanSide && !game.over) {
-                // zar atmaya davet
-                float k = 1f + 0.06f * pulse;
+                float k = 1f + 0.07f * pulse;
                 drawDie(c, cx - s * 0.62f, cy, s * k, 6, false, 0f);
                 drawDie(c, cx + s * 0.62f, cy, s * k, 3, false, 0f);
             }
@@ -438,34 +550,62 @@ public class BoardView extends View {
                 usedB = cnt[game.d2] > 0;
             }
         }
-        float wob = rolling ? rollWobble : 0f;
-        drawDie(c, cx - s * 0.62f, cy, s, a, usedA, wob);
-        drawDie(c, cx + s * 0.62f, cy, s, d, usedB, -wob);
+        float ax = cx - s * 0.62f, bx = cx + s * 0.62f;
+        float ay = cy, by = cy, angA = 0f, angB = 0f;
+        float sc = 1f;
+        if (rolling) {
+            float inv = 1f - rollT;
+            float dir = humanSide ? 1f : -1f;
+            float fly = inv * inv * colW * 5f * dir;
+            float bounce = (float) Math.abs(Math.sin(rollT * Math.PI * 3.0)) * inv * s * 0.45f;
+            ax += fly;
+            bx += fly * 0.8f;
+            ay -= bounce;
+            by -= bounce * 0.8f;
+            angA = inv * 540f;
+            angB = -inv * 420f;
+            sc = 1f + 0.12f * (float) Math.sin(rollT * Math.PI);
+        }
+        drawDie(c, ax, ay, s * sc, a, usedA, angA);
+        drawDie(c, bx, by, s * sc, d, usedB, angB);
         if (!rolling && game.d1 == game.d2 && remaining > 0 && remaining < 4) {
             tp.setColor(theme.accent);
-            tp.setTextSize(s * 0.42f);
+            tp.setTextSize(s * 0.4f);
             c.drawText("x" + remaining, cx, cy + s * 0.95f, tp);
         }
     }
 
-    private void drawDie(Canvas c, float cx, float cy, float s, int face, boolean dim, float wobbleDeg) {
+    private void drawDie(Canvas c, float cx, float cy, float s, int face, boolean dim, float angleDeg) {
         c.save();
-        c.rotate(wobbleDeg, cx, cy);
+        c.rotate(angleDeg, cx, cy);
         float h = s / 2f;
         p.setStyle(Paint.Style.FILL);
-        p.setColor(0x66000000);
-        rect.set(cx - h + 2, cy - h + 3, cx + h + 2, cy + h + 3);
+        p.setColor(0x77000000);
+        p.setMaskFilter(new BlurMaskFilter(s * 0.08f, BlurMaskFilter.Blur.NORMAL));
+        rect.set(cx - h + s * 0.04f, cy - h + s * 0.08f, cx + h + s * 0.04f, cy + h + s * 0.08f);
         c.drawRoundRect(rect, s * 0.2f, s * 0.2f, p);
-        p.setColor(dim ? 0xFF8C8C8C : 0xFFFAF7F0);
+        p.setMaskFilter(null);
+        p.setShader(new LinearGradient(cx - h, cy - h, cx + h, cy + h,
+                dim ? 0xFFA8A8A8 : 0xFFFFFFFF, dim ? 0xFF7A7A7A : 0xFFD9D2C3, Shader.TileMode.CLAMP));
         rect.set(cx - h, cy - h, cx + h, cy + h);
         c.drawRoundRect(rect, s * 0.2f, s * 0.2f, p);
-        p.setColor(dim ? 0xFF4A4A4A : 0xFF1B1B1B);
+        p.setShader(null);
+        p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(Math.max(1.5f, s * 0.025f));
+        p.setColor(0x55000000);
+        c.drawRoundRect(rect, s * 0.2f, s * 0.2f, p);
+        p.setStyle(Paint.Style.FILL);
         float o = s * 0.26f;
-        float pr = s * 0.085f;
+        float pr = s * 0.088f;
         boolean[][] map = PIPS[Math.max(1, Math.min(6, face))];
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
-                if (map[row][col]) c.drawCircle(cx + (col - 1) * o, cy + (row - 1) * o, pr, p);
+                if (!map[row][col]) continue;
+                float px = cx + (col - 1) * o, py = cy + (row - 1) * o;
+                p.setShader(new RadialGradient(px - pr * 0.3f, py - pr * 0.3f, pr * 1.4f,
+                        dim ? 0xFF666666 : 0xFF444444, dim ? 0xFF2E2E2E : 0xFF050505, Shader.TileMode.CLAMP));
+                c.drawCircle(px, py, pr, p);
+                p.setShader(null);
             }
         }
         c.restore();
@@ -493,25 +633,31 @@ public class BoardView extends View {
     /** Zar atma animasyonu; bitince 'done' çalışır. Sonuç zaten Game tarafından belirlenmiştir. */
     public void animateDice(final Runnable done) {
         rolling = true;
+        rollT = 0f;
         selectedFrom = -1;
         hintMove = null;
         final long start = System.currentTimeMillis();
-        final long dur = 700;
+        final long dur = 900;
         handler.post(new Runnable() {
+            int tick = 0;
+
             @Override
             public void run() {
                 long t = System.currentTimeMillis() - start;
                 if (t >= dur) {
                     rolling = false;
+                    rollT = 1f;
                     invalidate();
                     if (done != null) done.run();
                     return;
                 }
-                rollFaceA = rnd.nextInt(6) + 1;
-                rollFaceB = rnd.nextInt(6) + 1;
-                rollWobble = (rnd.nextFloat() - 0.5f) * 40f * (1f - (float) t / dur);
+                rollT = (float) t / dur;
+                if (tick++ % 4 == 0) {
+                    rollFaceA = rnd.nextInt(6) + 1;
+                    rollFaceB = rnd.nextInt(6) + 1;
+                }
                 invalidate();
-                handler.postDelayed(this, 70);
+                handler.postDelayed(this, 16);
             }
         });
     }
@@ -575,11 +721,78 @@ public class BoardView extends View {
 
     // ------------------------------------------------------------ dokunma
 
+    private boolean canPlay() {
+        return game != null && !locked && !game.over && !moving && !rolling
+                && game.turn == Game.HUMAN && game.rolled;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent e) {
-        if (e.getAction() == MotionEvent.ACTION_UP) {
-            handleTap(e.getX(), e.getY());
-            performClick();
+        float x = e.getX(), y = e.getY();
+        switch (e.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                downX = x;
+                downY = y;
+                dragging = false;
+                dragFrom = -1;
+                if (canPlay()) {
+                    int t = hitTest(x, y);
+                    if (t >= 1) {
+                        for (Move m : game.nextMoves()) {
+                            if (m.from == t) {
+                                dragFrom = t;
+                                break;
+                            }
+                        }
+                    }
+                }
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                if (dragFrom != -1 && canPlay()) {
+                    float slop = colW * 0.35f;
+                    if (!dragging && Math.hypot(x - downX, y - downY) > slop) {
+                        dragging = true;
+                        selectedFrom = dragFrom;
+                    }
+                    if (dragging) {
+                        dragX = x;
+                        dragY = y;
+                        invalidate();
+                    }
+                }
+                return true;
+            case MotionEvent.ACTION_CANCEL:
+                dragging = false;
+                dragFrom = -1;
+                invalidate();
+                return true;
+            case MotionEvent.ACTION_UP:
+                if (dragging) {
+                    dragging = false;
+                    int from = dragFrom;
+                    dragFrom = -1;
+                    int target = hitTest(x, y);
+                    Move best = null;
+                    if (canPlay()) {
+                        for (Move m : game.nextMoves()) {
+                            if (m.from != from) continue;
+                            boolean match = (target == 0 && m.to <= 0) || (target >= 1 && target <= 24 && m.to == target);
+                            if (match && (best == null || m.die < best.die)) best = m;
+                        }
+                    }
+                    if (best != null) {
+                        selectedFrom = -1;
+                        invalidate();
+                        if (listener != null) listener.onMoveChosen(best);
+                    } else {
+                        invalidate();
+                    }
+                    return true;
+                }
+                dragFrom = -1;
+                handleTap(x, y);
+                performClick();
+                return true;
         }
         return true;
     }
@@ -650,6 +863,23 @@ public class BoardView extends View {
         }
         boolean has = false;
         for (Move m : moves) if (m.from == target) has = true;
+        if (!has && selectedFrom == -1 && target >= 0) {
+            // doğrudan hedefe dokunma: tek kaynak varsa o taşı oynat
+            int src = -2;
+            Move pick = null;
+            for (Move m : moves) {
+                boolean match = (target == 0 && m.to <= 0) || (target >= 1 && m.to == target);
+                if (!match) continue;
+                if (src == -2) src = m.from;
+                else if (src != m.from) src = -3;
+                if (pick == null || m.die < pick.die) pick = m;
+            }
+            if (pick != null && src >= 0) {
+                invalidate();
+                if (listener != null) listener.onMoveChosen(pick);
+                return;
+            }
+        }
         selectedFrom = has ? target : -1;
         invalidate();
     }

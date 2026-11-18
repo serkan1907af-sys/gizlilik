@@ -71,6 +71,7 @@ public class MenuActivity extends Activity {
         root.addView(btnPro, row());
 
         setContentView(root);
+        UiKit.applyInsets(root, 32);
     }
 
     private LinearLayout.LayoutParams row() {

@@ -52,6 +52,7 @@ public class SettingsActivity extends Activity {
         themeBox = UiKit.vertical(this);
         box.addView(themeBox);
         setContentView(sv);
+        UiKit.applyInsets(sv, 0);
         buildThemes();
     }
 
