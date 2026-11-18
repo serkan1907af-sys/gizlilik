@@ -467,8 +467,8 @@ public class TouchOverlay extends View {
         return true;
     }
 
-    private static int clampI(float v) {
-        return (int) Math.max(-32767f, Math.min(32767f, v));
+    private static int clampI(double v) {
+        return (int) Math.max(-32767.0, Math.min(32767.0, v));
     }
 
     private float stickRadius() {
