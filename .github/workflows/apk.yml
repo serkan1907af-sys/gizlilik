@@ -30,10 +30,9 @@ jobs:
             echo "TAVLA_KS_PASS=$KS_PASS" >> "$GITHUB_ENV"
             echo "Kalici anahtar kullaniliyor"
           else
-            PASS="gecici$(date +%s)"
-            keytool -genkeypair -keystore "$RUNNER_TEMP/tavla.jks" -storepass "$PASS" -keypass "$PASS" -alias tavla -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Tavla Test, O=Tavla, C=TR"
-            echo "TAVLA_KS_PASS=$PASS" >> "$GITHUB_ENV"
-            echo "Gecici (deneme) anahtar uretildi"
+            cp ci/test-key.p12 "$RUNNER_TEMP/tavla.jks"
+            echo "TAVLA_KS_PASS=testtavla123" >> "$GITHUB_ENV"
+            echo "Sabit DENEME anahtari kullaniliyor (Play Store icin kullanma)"
           fi
           echo "TAVLA_KS_PATH=$RUNNER_TEMP/tavla.jks" >> "$GITHUB_ENV"
       - name: APK derle
