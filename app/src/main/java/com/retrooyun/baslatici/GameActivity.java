@@ -7,7 +7,13 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.input.InputManager;
+import android.view.Surface;
 import android.content.Intent;
 import android.util.SparseArray;
 import android.media.AudioAttributes;
@@ -53,6 +59,35 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private final SparseArray<String> held = new SparseArray<>(); // tus kodu -> islev
     private volatile int keyMask, keyStrafe;
     private InputManager inputManager;
+
+    // jiroskop: telefonu cevirerek bakma / nisan alma
+    private SensorManager sensorManager;
+    private volatile boolean gyroOn = false;
+    private volatile int gyroRx, gyroRy;
+    private float gyroSmoothX, gyroSmoothY;
+    private int gyroRot = Surface.ROTATION_90;
+    private final SensorEventListener gyroListener = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent e) {
+            float wx = e.values[0], wy = e.values[1];
+            // ekranin yukari/saga eksenleri, telefonun donus yonune gore cihaz eksenlerinden bulunur
+            float up = gyroRot == Surface.ROTATION_90 ? wx : -wx;
+            float right = gyroRot == Surface.ROTATION_90 ? -wy : wy;
+            float gain = 12000f * Math.max(0.1f, st.geti("gyro.sens", 100) / 100f);
+            float x = -up * gain * (st.getb("gyro.invx", false) ? -1f : 1f);
+            float y = right * gain * (st.getb("gyro.invy", false) ? -1f : 1f);
+            if (Math.abs(up) < 0.03f) x = 0;
+            if (Math.abs(right) < 0.03f) y = 0;
+            gyroSmoothX = gyroSmoothX * 0.5f + x * 0.5f;
+            gyroSmoothY = gyroSmoothY * 0.5f + y * 0.5f;
+            gyroRx = (int) Math.max(-32767f, Math.min(32767f, gyroSmoothX));
+            gyroRy = Actions.quake(kind) ? (int) Math.max(-32767f, Math.min(32767f, gyroSmoothY)) : 0;
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        }
+    };
     private final InputManager.InputDeviceListener devListener = new InputManager.InputDeviceListener() {
         @Override public void onInputDeviceAdded(int id) { refreshPads(); }
         @Override public void onInputDeviceRemoved(int id) { refreshPads(); }
@@ -119,6 +154,9 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     protected void onPause() {
         paused = true;
         if (inputManager != null) inputManager.unregisterInputDeviceListener(devListener);
+        if (sensorManager != null) sensorManager.unregisterListener(gyroListener);
+        gyroRx = 0;
+        gyroRy = 0;
         held.clear();
         keyMask = 0;
         keyStrafe = 0;
@@ -133,6 +171,17 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         inputManager = (InputManager) getSystemService(INPUT_SERVICE);
         if (inputManager != null) inputManager.registerInputDeviceListener(devListener, null);
         refreshPads();
+        gyroOn = st.getb("gyro", false);
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        if (gyroOn && sensorManager != null) {
+            Sensor g = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+            if (g != null) {
+                gyroRot = getWindowManager().getDefaultDisplay().getRotation();
+                sensorManager.registerListener(gyroListener, g, SensorManager.SENSOR_DELAY_GAME);
+            } else {
+                gyroOn = false;
+            }
+        }
         if (!dialogOpen) paused = false;
     }
 
@@ -305,6 +354,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
                 int rx = pick(overlay.rx, padRx);
                 int ry = pick(overlay.ry, padRy);
+                if (gyroOn) {
+                    rx = (int) Math.max(-32767, Math.min(32767, rx + gyroRx));
+                    ry = (int) Math.max(-32767, Math.min(32767, ry + gyroRy));
+                }
                 int lx = pick(overlay.lx, padLx);
                 int ly = pick(overlay.ly, padLy);
                 lx = (int) Math.max(-32767, Math.min(32767, lx + keyStrafe));
@@ -434,6 +487,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             String act = st.actionFor(kind, Settings.normalize(this, st, code));
             if (act != null) {
                 held.put(code, act);
+                int tk = Actions.keyFor(kind, act);
+                if (tk != 0) Native.tapKey(tk);
                 recomputeKeys();
                 if (act.equals("menu") && overlay != null) overlay.toggleMenu();
                 return true;

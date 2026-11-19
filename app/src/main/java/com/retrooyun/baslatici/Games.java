@@ -15,6 +15,16 @@ final class Games {
 
     static final String KIND_DOOM = "doom";
     static final String KIND_QUAKE = "quake";
+    static final String KIND_HERETIC = "heretic";
+    static final String KIND_HEXEN = "hexen";
+
+    /** WAD dosya adindan oyun turunu bulur (Heretic / Hexen / Doom). */
+    static String kindForWad(String fileName) {
+        String n = fileName.toLowerCase(java.util.Locale.ROOT);
+        if (n.contains("heretic")) return KIND_HERETIC;
+        if (n.contains("hexen") || n.contains("hexdd")) return KIND_HEXEN;
+        return KIND_DOOM;
+    }
 
     /** RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 2): iki analog cubuklu "modern" kumanda duzeni. */
     static final int DEVICE_MODERN = (3 << 8) | 5;

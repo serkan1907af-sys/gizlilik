@@ -21,13 +21,14 @@ public class TouchOverlay extends View {
         void onSelected(String name, boolean visible);
     }
 
-    private static final int MODE_GAME = 0, MODE_MENU = 1;
-    private static final int ACT_NONE = 0, ACT_OPEN_MENU = 1, ACT_CLOSE_MENU = 2;
+    private static final int MODE_GAME = 0, MODE_MENU = 1, MODE_KBD = 2;
+    private static final int ACT_NONE = 0, ACT_OPEN_MENU = 1, ACT_CLOSE_MENU = 2, ACT_OPEN_KBD = 3;
 
     private static final class Ctl {
         String id, label, action;
         int mask, mode, act;
-        boolean round, pressed, visible, editable;
+        boolean round, pressed, visible, editable, strip;
+        int key, n, seg = -1;
         float cx, cy, r, baseR, scale = 1f;
         final RectF rect = new RectF();
     }
@@ -199,6 +200,12 @@ public class TouchOverlay extends View {
             case "sl": return new float[]{w - 290 * d, h - 62 * d, 32 * d};
             case "sr": return new float[]{w - 215 * d, h - 150 * d, 32 * d};
             case "fire2": return new float[]{w - 62 * d, 62 * d, 44 * d};
+            case "jump": return new float[]{w - 150 * d, h - 205 * d, 32 * d};
+            case "wpn": return new float[]{cx, 80 * d, 0};
+            case "kbd": return new float[]{cx + 230 * d, 30 * d, 0};
+            case "inv_l": return new float[]{cx - 230 * d, 30 * d, 0};
+            case "item": return new float[]{cx - 322 * d, 30 * d, 0};
+            case "inv_r": return new float[]{cx - 414 * d, 30 * d, 0};
             case "prev": return new float[]{cx - 138 * d, 30 * d, 0};
             case "menu": return new float[]{cx - 46 * d, 30 * d, 0};
             case "next": return new float[]{cx + 46 * d, 30 * d, 0};
@@ -209,6 +216,9 @@ public class TouchOverlay extends View {
     private void layoutCtl(Ctl c) {
         if (c.round) {
             c.r = c.baseR * c.scale;
+        } else if (c.strip) {
+            float hw = c.n * 18 * d * c.scale, hh = 17 * d * c.scale;
+            c.rect.set(c.cx - hw, c.cy - hh, c.cx + hw, c.cy + hh);
         } else {
             float hw = 42 * d * c.scale, hh = 20 * d * c.scale;
             c.rect.set(c.cx - hw, c.cy - hh, c.cx + hw, c.cy + hh);
@@ -256,8 +266,11 @@ public class TouchOverlay extends View {
             c.action = Actions.ctlAction(id);
             c.mask = Actions.mask(kind, c.action);
             c.mode = MODE_GAME;
-            c.act = id.equals("menu") ? ACT_OPEN_MENU : ACT_NONE;
-            c.round = !Actions.isPill(id);
+            c.act = id.equals("menu") ? ACT_OPEN_MENU : id.equals("kbd") ? ACT_OPEN_KBD : ACT_NONE;
+            c.key = Actions.keyFor(kind, c.action);
+            c.strip = id.equals("wpn");
+            c.n = Actions.weaponCount(kind);
+            c.round = !Actions.isPill(id) && !c.strip;
             c.editable = true;
             c.visible = st.visible(kind, id);
             float[] df = def(id, w, h);
@@ -275,6 +288,8 @@ public class TouchOverlay extends View {
             controls.add(c);
         }
 
+        buildKeyboard(w, h);
+
         float cx = w / 2f, ty = 30 * d;
         float mx = 150 * d, my = h - 130 * d;
         addMenu(true, "▲", Actions.UP, ACT_NONE, mx, my - 62 * d, 32 * d);
@@ -285,6 +300,47 @@ public class TouchOverlay extends View {
         addMenu(true, "GERİ", Actions.B, ACT_NONE, w - 205 * d, h - 70 * d, 38 * d);
         addMenu(false, "KAPAT", Actions.START, ACT_CLOSE_MENU, cx - 46 * d, ty, 0);
         addMenu(false, "OYUN", 0, ACT_CLOSE_MENU, cx + 46 * d, ty, 0);
+    }
+
+    private void addKey(String label, int key, int act, float l, float t, float r, float b) {
+        Ctl c = new Ctl();
+        c.id = "k_" + label;
+        c.label = label;
+        c.mode = MODE_KBD;
+        c.act = act;
+        c.key = key;
+        c.visible = true;
+        c.rect.set(l, t, r, b);
+        controls.add(c);
+    }
+
+    /** Ekran klavyesi: rakamlar, harfler, ESC, Enter, bosluk, ~ (Quake konsolu). */
+    private void buildKeyboard(int w, int h) {
+        float top = h * 0.40f, pad = 3 * d;
+        float rowH = (h - top - 8 * d) / 5f;
+        float kw = Math.min(64 * d, (w - 24 * d) / 10f);
+        float x0 = (w - 10 * kw) / 2f;
+        String[] rows = {"1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm"};
+        for (int r = 0; r < rows.length; r++) {
+            String row = rows[r];
+            for (int i = 0; i < row.length(); i++) {
+                char ch = row.charAt(i);
+                float l = x0 + i * kw, t = top + r * rowH;
+                addKey(String.valueOf(Character.toUpperCase(ch)), ch, ACT_NONE, l + pad, t + pad, l + kw - pad, t + rowH - pad);
+            }
+        }
+        float t3 = top + 2 * rowH;
+        addKey("⌫", 8, ACT_NONE, x0 + 9 * kw + pad, t3 + pad, x0 + 10 * kw - pad, t3 + rowH - pad);
+        float t4 = top + 3 * rowH;
+        addKey("-", '-', ACT_NONE, x0 + 7 * kw + pad, t4 + pad, x0 + 8 * kw - pad, t4 + rowH - pad);
+        addKey(".", '.', ACT_NONE, x0 + 8 * kw + pad, t4 + pad, x0 + 9 * kw - pad, t4 + rowH - pad);
+        addKey("↵", 13, ACT_NONE, x0 + 9 * kw + pad, t4 + pad, x0 + 10 * kw - pad, t4 + rowH - pad);
+        float t5 = top + 4 * rowH;
+        addKey("ESC", 27, ACT_NONE, x0 + pad, t5 + pad, x0 + 2 * kw - pad, t5 + rowH - pad);
+        addKey("~", '`', ACT_NONE, x0 + 2 * kw + pad, t5 + pad, x0 + 3 * kw - pad, t5 + rowH - pad);
+        addKey("/", '/', ACT_NONE, x0 + 3 * kw + pad, t5 + pad, x0 + 4 * kw - pad, t5 + rowH - pad);
+        addKey("BOŞLUK", ' ', ACT_NONE, x0 + 4 * kw + pad, t5 + pad, x0 + 8 * kw - pad, t5 + rowH - pad);
+        addKey("KAPAT", 0, ACT_CLOSE_MENU, x0 + 8 * kw + pad, t5 + pad, x0 + 10 * kw - pad, t5 + rowH - pad);
     }
 
     @Override
@@ -328,7 +384,14 @@ public class TouchOverlay extends View {
             if (c.mode != mode || !c.visible || c.id.equals("stick") || !hit(c, x, y)) continue;
             c.pressed = true;
             pointerCtl.put(id, c);
+            if (c.strip) {
+                c.seg = Math.max(0, Math.min(c.n - 1, (int) ((x - c.rect.left) / (c.rect.width() / c.n))));
+                Native.tapKey('1' + c.seg);
+            } else if (c.key != 0) {
+                Native.tapKey(c.key);
+            }
             if (c.act == ACT_OPEN_MENU) mode = MODE_MENU;
+            else if (c.act == ACT_OPEN_KBD) mode = MODE_KBD;
             else if (c.act == ACT_CLOSE_MENU) mode = MODE_GAME;
             return;
         }
@@ -365,6 +428,8 @@ public class TouchOverlay extends View {
             if (now - lastDown[side] < 350 && dx * dx + dy * dy < 90 * d * 90 * d) {
                 dtPtr[side] = id;
                 lastDown[side] = 0;
+                int dk = Actions.keyFor(kind, dtAct[side]);
+                if (dk != 0) Native.tapKey(dk);
             } else {
                 lastDown[side] = now;
                 lastX[side] = x;
@@ -537,7 +602,32 @@ public class TouchOverlay extends View {
         return Math.min(255, (int) (base * opMul));
     }
 
+    private void drawStrip(Canvas cv, Ctl c, boolean dim, boolean sel) {
+        float sw = c.rect.width() / c.n;
+        stroke.setColor((dim ? 0x60 : al(0xA0)) << 24 | (sel ? 0xFFD54F : 0xFFFFFF));
+        stroke.setStrokeWidth((sel ? 4f : 2f) * d);
+        text.setColor((dim ? 0x70 : al(0xDD)) << 24 | 0xFFFFFF);
+        text.setTextSize(Math.min(17 * d * c.scale, sw * 0.6f));
+        for (int i = 0; i < c.n; i++) {
+            boolean on = c.pressed && c.seg == i;
+            int fa = on ? al(0x78) : al(0x30);
+            if (dim) fa = 0x14;
+            fill.setColor((fa << 24) | 0xFFFFFF);
+            float l = c.rect.left + i * sw + 2 * d, r = c.rect.left + (i + 1) * sw - 2 * d;
+            RectF seg = new RectF(l, c.rect.top, r, c.rect.bottom);
+            cv.drawRoundRect(seg, 8 * d, 8 * d, fill);
+            cv.drawRoundRect(seg, 8 * d, 8 * d, stroke);
+            float ty = seg.centerY() - (text.ascent() + text.descent()) / 2f;
+            cv.drawText(String.valueOf(i + 1), seg.centerX(), ty, text);
+        }
+        stroke.setStrokeWidth(2f * d);
+    }
+
     private void drawCtl(Canvas cv, Ctl c, boolean dim, boolean sel) {
+        if (c.strip) {
+            drawStrip(cv, c, dim, sel);
+            return;
+        }
         int fa = c.pressed ? al(0x78) : al(0x30);
         if (dim) fa = 0x14;
         fill.setColor((fa << 24) | 0xFFFFFF);
@@ -589,6 +679,10 @@ public class TouchOverlay extends View {
         }
         if (padHidden) return;
 
+        if (mode == MODE_KBD) {
+            fill.setColor(0xB0000000);
+            cv.drawRect(0, getHeight() * 0.40f - 6 * d, getWidth(), getHeight(), fill);
+        }
         for (Ctl c : controls) {
             if (c.mode != mode || !c.visible || c.id.equals("stick")) continue;
             drawCtl(cv, c, false, false);

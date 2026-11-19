@@ -145,9 +145,11 @@ public class MainActivity extends Activity {
             Arrays.sort(wads);
             for (File f : wads) {
                 boolean bundled = f.getName().equals(Games.BUNDLED_WAD);
+                final String wadKind = Games.kindForWad(f.getName());
                 String label = "▶  " + f.getName() + "   (" + (f.length() / (1024 * 1024)) + " MB)"
-                        + (bundled ? "\nÜcretsiz Freedoom – hemen oyna" : "");
-                Button bt = button(label, bundled, v -> play(Games.KIND_DOOM, f.getPath()));
+                        + (bundled ? "\nÜcretsiz Freedoom – hemen oyna"
+                        : wadKind.equals(Games.KIND_DOOM) ? "" : "\n" + Actions.kindName(wadKind));
+                Button bt = button(label, bundled, v -> play(wadKind, f.getPath()));
                 if (!bundled) {
                     bt.setOnLongClickListener(v -> {
                         new AlertDialog.Builder(this)
@@ -165,7 +167,7 @@ public class MainActivity extends Activity {
             }
         }
         doom.addView(button("＋  Kendi WAD dosyanı ekle", false, v -> pickWad()));
-        TextView h1 = text("DOOM.WAD, DOOM2.WAD, Heretic, Hexen ve modları (WAD) eklenebilir. "
+        TextView h1 = text("DOOM.WAD, DOOM2.WAD, HERETIC.WAD, HEXEN.WAD ve modları (WAD) eklenebilir. "
                 + "Oyun dosyaları uygulamaya dahil değildir; kendi kopyanı sen eklersin. "
                 + "Eklenen dosyayı silmek için uzun bas.", 12.5f, DIM, false);
         h1.setPadding(0, dp(10), 0, 0);

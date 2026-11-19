@@ -169,12 +169,16 @@ public class SettingsActivity extends Activity {
 
         // ---- dokunmatik ----
         LinearLayout t = card("Dokunmatik kontroller");
-        choiceRow(t, "Doom düzeni",
-                new String[]{"Tek çubuk: ileri/geri + dön (sağ el serbest)", "İki çubuk: sol yürü, sağ dön"},
-                new String[]{"single", "twin"}, "scheme.doom", "single");
-        choiceRow(t, "Quake düzeni",
-                new String[]{"Tek çubuk: ileri/geri + dön", "İki çubuk: sol yürü, sağ etrafa bak"},
-                new String[]{"single", "twin"}, "scheme.quake", "twin");
+        for (String k : Actions.ALL_KINDS) {
+            if (Actions.quake(k))
+                choiceRow(t, "Quake düzeni",
+                        new String[]{"Tek çubuk: ileri/geri + dön", "İki çubuk: sol yürü, sağ etrafa bak"},
+                        new String[]{"single", "twin"}, "scheme." + k, "twin");
+            else
+                choiceRow(t, Actions.kindName(k) + " düzeni",
+                        new String[]{"Tek çubuk: ileri/geri + dön (sağ el serbest)", "İki çubuk: sol yürü, sağ dön"},
+                        new String[]{"single", "twin"}, "scheme." + k, "single");
+        }
         seekRow(t, "Hareket hassasiyeti", "sens.move", 40, 200, 100);
         seekRow(t, "Dönüş / bakış hassasiyeti", "sens.turn", 40, 250, 100);
         seekRow(t, "Tuş şeffaflığı", "opacity", 10, 100, 60);
@@ -183,12 +187,19 @@ public class SettingsActivity extends Activity {
         choiceRow(t, "Sol tarafa çift dokunuş", Actions.DT_NAMES, Actions.DT_IDS, "dt.left", "none");
         choiceRow(t, "Sağ tarafa çift dokunuş", Actions.DT_NAMES, Actions.DT_IDS, "dt.right", "none");
         note(t, "Çift dokunuş: boş bir yere hızlıca iki kez dokun, ikinci dokunuşta parmağını basılı tutarsan işlev basılı kalır.");
+        LinearLayout gy = card("Jiroskop (telefonu çevirerek bakma)");
+        switchRow(gy, "Jiroskopla bak / nişan al", "gyro", false);
+        seekRow(gy, "Jiroskop hassasiyeti", "gyro.sens", 20, 300, 100);
+        switchRow(gy, "Yatay yönü ters çevir (sağa çevirince sola dönüyorsa)", "gyro.invx", false);
+        switchRow(gy, "Dikey yönü ters çevir (Quake)", "gyro.invy", false);
+        note(gy, "Açınca telefonu hafifçe sağa-sola çevirerek dönersin, yukarı-aşağı eğerek (Quake'te) yukarı-aşağı bakarsın. "
+                + "Çubuk da çalışmaya devam eder, ikisi toplanır. Yönler ters çıkarsa yukarıdaki anahtarlarla düzelt.");
 
         // ---- yerlesim ----
         LinearLayout l = card("Ekran tuşlarının yerleşimi");
-        l.addView(button("Doom düzenini değiştir", true, v -> edit(Games.KIND_DOOM)));
-        l.addView(button("Quake düzenini değiştir", true, v -> edit(Games.KIND_QUAKE)));
-        note(l, "Tuşları sürükle, büyüt/küçült, göster/gizle. Hazır düzenler (Sade, Klasik, Çok tuşlu) ve kendi kayıtlı düzenlerin burada.");
+        for (String k : Actions.ALL_KINDS)
+            l.addView(button(Actions.kindName(k) + " düzenini değiştir", true, v -> edit(k)));
+        note(l, "Tuşları sürükle, büyüt/küçült, göster/gizle. Silah seçme şeridi (1, 2, 3…) ve ekran klavyesi düğmesi de buradan taşınır. Hazır düzenler (Sade, Klasik, Çok tuşlu) ve kendi kayıtlı düzenlerin burada.");
 
         // ---- fiziksel tuslar ----
         LinearLayout p = card("Fiziksel tuşlar ve kumanda");
@@ -198,8 +209,7 @@ public class SettingsActivity extends Activity {
         note(p, "\"Ses +\" tuşu, telefonu hangi yöne yatırırsan yatır sağ elindeki tuş olur. "
                 + "Bu telefonda ters çıkarsa \"ters çevir\" anahtarını aç. Atamaları telefon yatayken yap.");
 
-        bindCard(Games.KIND_DOOM, "Doom tuş atamaları");
-        bindCard(Games.KIND_QUAKE, "Quake tuş atamaları");
+        for (String k : Actions.ALL_KINDS) bindCard(k, Actions.kindName(k) + " tuş atamaları");
 
         sv.post(() -> sv.scrollTo(0, keep));
     }

@@ -32,6 +32,8 @@ public final class Native {
 
     public static native int frameCount();
     public static native boolean shutdownRequested();
+    /** Motora klavye tusu gonderir (RETROK_* kodu, ornegin '1' = 49). */
+    public static native void tapKey(int retrok);
 
     public static native String lastError();
 

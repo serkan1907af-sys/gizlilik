@@ -52,6 +52,17 @@ static size_t g_rgba_cap = 0;
 static int g_w = 0, g_h = 0;
 static int g_frames = 0;
 static int g_shutdown = 0;
+
+/* ---- klavye: tus dokunuslari (1-7 silah secimi, ekran klavyesi) ---- */
+#define KEY_MAX 512
+#define TAPQ 64
+static int g_keys[KEY_MAX];
+static retro_keyboard_event_t g_kbcb = NULL;
+static volatile unsigned g_tapq[TAPQ];
+static volatile unsigned g_tap_head = 0, g_tap_tail = 0; /* tek uretici, tek tuketici */
+static unsigned g_tap_code = 0;
+static int g_tapf = 0;
+static unsigned g_device = 0;
 static float g_aspect = 0.f;
 static double g_fps = 60.0, g_rate = 44100.0;
 
@@ -94,10 +105,12 @@ static bool RETRO_CALLCONV env_cb(unsigned cmd, void *data)
     case CMD(RETRO_ENVIRONMENT_SHUTDOWN):
         g_shutdown = 1;
         return true;
+    case CMD(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK):
+        if (data) g_kbcb = ((struct retro_keyboard_callback *)data)->callback;
+        return true;
     case CMD(RETRO_ENVIRONMENT_SET_ROTATION):
     case CMD(RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL):
     case CMD(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS):
-    case CMD(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK):
     case CMD(RETRO_ENVIRONMENT_SET_VARIABLES):
     case CMD(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME):
     case CMD(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO):
@@ -280,6 +293,8 @@ static int16_t RETRO_CALLCONV input_cb(unsigned port, unsigned device, unsigned 
         if (index == RETRO_DEVICE_INDEX_ANALOG_BUTTON && id < 16)
             return ((g_buttons >> id) & 1) ? 0x7FFF : 0;
         return 0;
+    case RETRO_DEVICE_KEYBOARD:
+        return id < KEY_MAX ? (int16_t)g_keys[id] : 0;
     default:
         return 0;
     }
@@ -296,6 +311,9 @@ int host_load_core(const char *core_path, const char *system_dir, const char *sa
 {
     memset(&core, 0, sizeof(core));
     g_error[0] = 0;
+    g_kbcb = NULL;
+    memset(g_keys, 0, sizeof(g_keys));
+    g_tap_code = 0; g_tapf = 0; g_tap_head = g_tap_tail = 0;
     snprintf(g_system_dir, sizeof(g_system_dir), "%s", system_dir ? system_dir : ".");
     snprintf(g_save_dir, sizeof(g_save_dir), "%s", save_dir ? save_dir : ".");
     g_w = g_h = g_frames = 0;
@@ -390,6 +408,7 @@ int host_load_game(const char *game_path, unsigned controller_device)
     g_h = (int)av.geometry.base_height;
     HLOG("av: %dx%d aspect=%.3f fps=%.2f rate=%.0f", g_w, g_h, g_aspect, g_fps, g_rate);
 
+    g_device = controller_device;
     if (controller_device) core.retro_set_controller_port_device(0, controller_device);
     return 1;
 }
@@ -403,9 +422,52 @@ void host_set_input(uint32_t buttons, int lx, int ly, int rx, int ry)
     g_ax[1][1] = ry;
 }
 
+void host_tap_key(unsigned code)
+{
+    unsigned next = (g_tap_head + 1) % TAPQ;
+    if (next == g_tap_tail || code >= KEY_MAX) return; /* kuyruk dolu */
+    g_tapq[g_tap_head] = code;
+    g_tap_head = next;
+}
+
+/* Bir tusa kisa sure basar. Quake: klavye geri cagrisiyla. Doom: motor klavyeyi yalnizca
+ * "klavye" cihazindayken okudugu icin cihaz birkac kare icin klavyeye gecirilir. */
+static void tap_step_before(void)
+{
+    if (!g_tap_code) {
+        if (g_tap_tail == g_tap_head) return;
+        g_tap_code = g_tapq[g_tap_tail];
+        g_tap_tail = (g_tap_tail + 1) % TAPQ;
+        g_tapf = 0;
+    }
+    if (g_tapf == 0) {
+        if (g_kbcb) g_kbcb(true, g_tap_code, 0, 0);
+        else {
+            core.retro_set_controller_port_device(0, RETRO_DEVICE_KEYBOARD);
+            g_keys[g_tap_code] = 1;
+        }
+    } else if (g_tapf == 2) {
+        if (g_kbcb) g_kbcb(false, g_tap_code, 0, 0);
+        else g_keys[g_tap_code] = 0;
+    }
+}
+
+static void tap_step_after(void)
+{
+    if (!g_tap_code) return;
+    if (++g_tapf >= 4) {
+        if (!g_kbcb && g_device) core.retro_set_controller_port_device(0, g_device);
+        g_tap_code = 0;
+        g_tapf = 0;
+    }
+}
+
 void host_run(void)
 {
-    if (g_loaded_game && !g_shutdown) core.retro_run();
+    if (!g_loaded_game || g_shutdown) return;
+    tap_step_before();
+    core.retro_run();
+    tap_step_after();
 }
 
 void host_unload(void)

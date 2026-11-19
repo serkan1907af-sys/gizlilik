@@ -82,7 +82,7 @@ final class Settings {
 
     /** Doom varsayilan: tek cubuk. Quake varsayilan: iki cubuk. */
     boolean twin(String kind) {
-        return "twin".equals(gets("scheme." + kind, Actions.doom(kind) ? "single" : "twin"));
+        return "twin".equals(gets("scheme." + kind, Actions.quake(kind) ? "twin" : "single"));
     }
 
     // ---- yerlesim ----
