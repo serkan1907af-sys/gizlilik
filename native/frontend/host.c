@@ -51,6 +51,7 @@ static uint32_t *g_rgba = NULL;
 static size_t g_rgba_cap = 0;
 static int g_w = 0, g_h = 0;
 static int g_frames = 0;
+static int g_shutdown = 0;
 static float g_aspect = 0.f;
 static double g_fps = 60.0, g_rate = 44100.0;
 
@@ -90,6 +91,9 @@ static void RETRO_CALLCONV log_cb(enum retro_log_level level, const char *fmt, .
 static bool RETRO_CALLCONV env_cb(unsigned cmd, void *data)
 {
     switch (CMD(cmd)) {
+    case CMD(RETRO_ENVIRONMENT_SHUTDOWN):
+        g_shutdown = 1;
+        return true;
     case CMD(RETRO_ENVIRONMENT_SET_ROTATION):
     case CMD(RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL):
     case CMD(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS):
@@ -401,7 +405,7 @@ void host_set_input(uint32_t buttons, int lx, int ly, int rx, int ry)
 
 void host_run(void)
 {
-    if (g_loaded_game) core.retro_run();
+    if (g_loaded_game && !g_shutdown) core.retro_run();
 }
 
 void host_unload(void)
@@ -425,6 +429,7 @@ float host_aspect(void) { return g_aspect > 0.f ? g_aspect : (g_h ? (float)g_w /
 double host_fps(void) { return g_fps; }
 double host_sample_rate(void) { return g_rate; }
 int host_frame_count(void) { return g_frames; }
+int host_shutdown_requested(void) { return g_shutdown; }
 
 void host_copy_rgba(uint32_t *dst, int dst_stride_px)
 {

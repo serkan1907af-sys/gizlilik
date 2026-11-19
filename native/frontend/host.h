@@ -24,6 +24,7 @@ float  host_aspect(void);
 double host_fps(void);
 double host_sample_rate(void);
 int    host_frame_count(void);
+int    host_shutdown_requested(void);
 
 /* Copies the last video frame as RGBA bytes (R,G,B,A in memory order).
  * dst_stride_px is the row length of dst in pixels. */

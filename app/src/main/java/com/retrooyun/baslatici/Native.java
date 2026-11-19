@@ -31,6 +31,7 @@ public final class Native {
     public static native double sampleRate();
 
     public static native int frameCount();
+    public static native boolean shutdownRequested();
 
     public static native String lastError();
 

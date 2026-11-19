@@ -39,6 +39,7 @@ JNIEXPORT jint JNICALL JNI(height)(JNIEnv *env, jclass c) { return host_height()
 JNIEXPORT jfloat JNICALL JNI(aspect)(JNIEnv *env, jclass c) { return host_aspect(); }
 JNIEXPORT jdouble JNICALL JNI(fps)(JNIEnv *env, jclass c) { return host_fps(); }
 JNIEXPORT jdouble JNICALL JNI(sampleRate)(JNIEnv *env, jclass c) { return host_sample_rate(); }
+JNIEXPORT jboolean JNICALL JNI(shutdownRequested)(JNIEnv *env, jclass c) { return host_shutdown_requested() ? JNI_TRUE : JNI_FALSE; }
 JNIEXPORT jint JNICALL JNI(frameCount)(JNIEnv *env, jclass c) { return host_frame_count(); }
 
 JNIEXPORT jstring JNICALL JNI(lastError)(JNIEnv *env, jclass c)

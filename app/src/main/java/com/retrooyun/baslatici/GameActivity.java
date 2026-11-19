@@ -310,6 +310,11 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                 lx = (int) Math.max(-32767, Math.min(32767, lx + keyStrafe));
                 Native.setInput(overlay.buttons | padButtons | padAxisButtons | keyMask, lx, ly, rx, ry);
                 Native.run();
+                if (Native.shutdownRequested()) {
+                    runOnUiThread(this::quit); // oyunun kendi menusunden "Quit Game"
+                    running = false;
+                    break;
+                }
 
                 if (audio != null) {
                     int n;
