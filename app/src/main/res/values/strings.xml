@@ -74,7 +74,7 @@
     <string name="pro_locked_theme">Bu tema Pro sürümde</string>
 
     <string name="pro_title">Tavla Pro</string>
-    <string name="pro_features">• Reklamsız oyun\n• Sınırsız ipucu ve geri alma\n• 4 ek tahta teması\n• Ayrıntılı istatistikler\n\nTek seferlik ödeme, abonelik yok.</string>
+    <string name="pro_features">• Reklamsız oyun\n• Sınırsız ipucu ve geri alma\n• Tüm zar, taş, tahta ve avatarlar açık\n• Tüm jeton ödülleri 2 kat\n• Ayrıntılı istatistikler\n\nTek seferlik ödeme, abonelik yok.</string>
     <string name="pro_buy_fmt">Satın Al (%1$s)</string>
     <string name="pro_buy">Satın Al</string>
     <string name="pro_restore">Satın alımı geri yükle</string>

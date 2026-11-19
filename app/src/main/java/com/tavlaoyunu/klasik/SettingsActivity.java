@@ -70,7 +70,7 @@ public class SettingsActivity extends Activity {
     private void buildThemes() {
         themeBox.removeAllViews();
         int current = Prefs.theme();
-        if (BoardTheme.get(current).pro && !Prefs.pro()) current = 0;
+        if (!Economy.owns("b" + current)) current = 0;
         for (int i = 0; i < BoardTheme.COUNT; i++) {
             final BoardTheme t = BoardTheme.get(i);
             LinearLayout row = UiKit.horizontal(this);
@@ -91,15 +91,15 @@ public class SettingsActivity extends Activity {
 
             String tag = "";
             if (i == current) tag = "✓";
-            else if (t.pro && !Prefs.pro()) tag = "🔒 " + getString(R.string.pro_only);
+            else if (!Economy.owns("b" + t.id)) tag = "🔒 " + getString(R.string.pro_only);
             row.addView(UiKit.text(this, tag, 15, UiKit.GOLD, true));
 
             row.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (t.pro && !Prefs.pro()) {
-                        Toast.makeText(SettingsActivity.this, R.string.pro_locked_theme, Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(SettingsActivity.this, ProActivity.class));
+                    if (!Economy.owns("b" + t.id)) {
+                        Toast.makeText(SettingsActivity.this, Economy.T("Bu tema Mağaza'da", "This theme is in the Shop"), Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(SettingsActivity.this, ShopActivity.class));
                         return;
                     }
                     Prefs.setTheme(t.id);

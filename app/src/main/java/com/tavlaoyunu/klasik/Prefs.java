@@ -13,6 +13,12 @@ public final class Prefs {
         if (sp == null) sp = c.getApplicationContext().getSharedPreferences("tavla", Context.MODE_PRIVATE);
     }
 
+    // ---- genel yardımcılar (ekonomi vb.) ----
+    public static int geti(String k, int d) { return sp.getInt(k, d); }
+    public static void puti(String k, int v) { sp.edit().putInt(k, v).apply(); }
+    public static String gets(String k, String d) { return sp.getString(k, d); }
+    public static void puts(String k, String v) { sp.edit().putString(k, v).apply(); }
+
     // ---- ayarlar ----
     public static boolean sound() { return sp.getBoolean("sound", true); }
     public static void setSound(boolean v) { sp.edit().putBoolean("sound", v).apply(); }

@@ -98,6 +98,8 @@ public class BoardView extends View {
     private boolean throwHasVel = false;
     private long lastBounceSfx = 0;
     private float diceS = 0f;
+    private Economy.Item diceSkin = Economy.find("d0");
+    private Economy.Item checkerSkin = Economy.find("c0");
 
     private float pulse = 0f;
     private ValueAnimator pulseAnim;
@@ -145,6 +147,13 @@ public class BoardView extends View {
 
     public void setTheme(BoardTheme t) {
         theme = t;
+        buildAssets();
+        invalidate();
+    }
+
+    public void setSkins(Economy.Item dice, Economy.Item checker) {
+        diceSkin = dice;
+        checkerSkin = checker;
         buildAssets();
         invalidate();
     }
@@ -285,31 +294,7 @@ public class BoardView extends View {
         // --- taşlar
         chkSize = (int) Math.ceil(r * 2.6f);
         for (int pl = 0; pl < 2; pl++) {
-            Bitmap bm = Bitmap.createBitmap(chkSize, chkSize, Bitmap.Config.ARGB_8888);
-            Canvas cc = new Canvas(bm);
-            Paint k = new Paint(Paint.ANTI_ALIAS_FLAG);
-            float cs = chkSize / 2f;
-            int fill = pl == Game.HUMAN ? theme.white : theme.black;
-            int edge = pl == Game.HUMAN ? theme.whiteEdge : theme.blackEdge;
-            k.setColor(0x77000000);
-            k.setMaskFilter(new BlurMaskFilter(r * 0.18f, BlurMaskFilter.Blur.NORMAL));
-            cc.drawCircle(cs + r * 0.06f, cs + r * 0.16f, r * 0.98f, k);
-            k.setMaskFilter(null);
-            k.setColor(edge);
-            cc.drawCircle(cs, cs, r, k);
-            k.setShader(new RadialGradient(cs - r * 0.3f, cs - r * 0.35f, r * 1.1f, shade(fill, 1.18f), shade(fill, 0.82f), Shader.TileMode.CLAMP));
-            cc.drawCircle(cs, cs, r * 0.88f, k);
-            k.setShader(null);
-            k.setStyle(Paint.Style.STROKE);
-            k.setStrokeWidth(Math.max(1.5f, r * 0.08f));
-            k.setColor(shade(edge, 1.0f));
-            k.setAlpha(170);
-            cc.drawCircle(cs, cs, r * 0.58f, k);
-            k.setStyle(Paint.Style.FILL);
-            k.setColor(0x33FFFFFF);
-            rect.set(cs - r * 0.55f, cs - r * 0.78f, cs + r * 0.35f, cs - r * 0.3f);
-            cc.drawOval(rect, k);
-            chkBmp[pl] = bm;
+            chkBmp[pl] = Skins.makeChecker(pl, r, chkSize, theme, checkerSkin);
         }
     }
 
@@ -608,42 +593,7 @@ public class BoardView extends View {
     }
 
     private void drawDie(Canvas c, float cx, float cy, float s, int face, boolean dim, float angleDeg, float lift) {
-        c.save();
-        c.rotate(angleDeg, cx, cy);
-        float h = s / 2f;
-        float so = s * (0.05f + 0.16f * lift);
-        p.setStyle(Paint.Style.FILL);
-        p.setColor(0x77000000);
-        p.setMaskFilter(new BlurMaskFilter(s * (0.08f + 0.08f * lift), BlurMaskFilter.Blur.NORMAL));
-        rect.set(cx - h + so * 0.5f, cy - h + so, cx + h + so * 0.5f, cy + h + so);
-        c.drawRoundRect(rect, s * 0.2f, s * 0.2f, p);
-        p.setMaskFilter(null);
-        float k = 1f + 0.1f * lift;
-        h = h * k;
-        p.setShader(new LinearGradient(cx - h, cy - h, cx + h, cy + h,
-                dim ? 0xFFA8A8A8 : 0xFFFFFFFF, dim ? 0xFF7A7A7A : 0xFFD9D2C3, Shader.TileMode.CLAMP));
-        rect.set(cx - h, cy - h, cx + h, cy + h);
-        c.drawRoundRect(rect, s * 0.2f * k, s * 0.2f * k, p);
-        p.setShader(null);
-        p.setStyle(Paint.Style.STROKE);
-        p.setStrokeWidth(Math.max(1.5f, s * 0.025f));
-        p.setColor(0x55000000);
-        c.drawRoundRect(rect, s * 0.2f * k, s * 0.2f * k, p);
-        p.setStyle(Paint.Style.FILL);
-        float o = s * 0.26f * k;
-        float pr = s * 0.088f * k;
-        boolean[][] map = PIPS[Math.max(1, Math.min(6, face))];
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 3; col++) {
-                if (!map[row][col]) continue;
-                float px = cx + (col - 1) * o, py = cy + (row - 1) * o;
-                p.setShader(new RadialGradient(px - pr * 0.3f, py - pr * 0.3f, pr * 1.4f,
-                        dim ? 0xFF666666 : 0xFF444444, dim ? 0xFF2E2E2E : 0xFF050505, Shader.TileMode.CLAMP));
-                c.drawCircle(px, py, pr, p);
-                p.setShader(null);
-            }
-        }
-        c.restore();
+        Skins.drawDie(c, p, rect, cx, cy, s, face, dim, angleDeg, lift, diceSkin);
     }
 
     private static final boolean[][][] PIPS = new boolean[7][3][3];

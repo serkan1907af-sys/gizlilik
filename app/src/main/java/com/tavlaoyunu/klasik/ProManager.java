@@ -10,6 +10,8 @@ import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.ConsumeParams;
+import com.android.billingclient.api.ConsumeResponseListener;
 import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.ProductDetailsResponseListener;
@@ -21,6 +23,8 @@ import com.android.billingclient.api.QueryPurchasesParams;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 /**
@@ -29,11 +33,15 @@ import java.util.List;
  */
 public final class ProManager implements PurchasesUpdatedListener {
     public static final String PRODUCT_ID = "pro_surum";
+    /** Tüketilebilir jeton paketleri (Play Console'da bu kimliklerle oluşturulmalı). */
+    public static final String[] COIN_IDS = {"jeton_500", "jeton_1500", "jeton_5000"};
+    public static final int[] COIN_AMOUNTS = {500, 1500, 5000};
 
     private static ProManager inst;
 
     private final BillingClient client;
     private ProductDetails details;
+    private final Map<String, ProductDetails> all = new HashMap<>();
     private final List<Runnable> listeners = new ArrayList<>();
     private final Handler main = new Handler(Looper.getMainLooper());
 
@@ -71,18 +79,22 @@ public final class ProManager implements PurchasesUpdatedListener {
     }
 
     private void queryDetails() {
-        QueryProductDetailsParams.Product prod = QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(PRODUCT_ID)
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build();
-        QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
-                .setProductList(Collections.singletonList(prod))
-                .build();
+        List<QueryProductDetailsParams.Product> prods = new ArrayList<>();
+        prods.add(QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(PRODUCT_ID).setProductType(BillingClient.ProductType.INAPP).build());
+        for (String id : COIN_IDS) {
+            prods.add(QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(id).setProductType(BillingClient.ProductType.INAPP).build());
+        }
+        QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(prods).build();
         client.queryProductDetailsAsync(params, new ProductDetailsResponseListener() {
             @Override
             public void onProductDetailsResponse(BillingResult result, List<ProductDetails> list) {
-                if (result.getResponseCode() == BillingClient.BillingResponseCode.OK && list != null && !list.isEmpty()) {
-                    details = list.get(0);
+                if (result.getResponseCode() == BillingClient.BillingResponseCode.OK && list != null) {
+                    for (ProductDetails d : list) {
+                        all.put(d.getProductId(), d);
+                        if (PRODUCT_ID.equals(d.getProductId())) details = d;
+                    }
                     notifyListeners();
                 }
             }
@@ -115,20 +127,59 @@ public final class ProManager implements PurchasesUpdatedListener {
     private void handle(List<Purchase> purchases) {
         if (purchases == null) return;
         for (Purchase p : purchases) {
-            if (!p.getProducts().contains(PRODUCT_ID)) continue;
             if (p.getPurchaseState() != Purchase.PurchaseState.PURCHASED) continue;
-            if (!p.isAcknowledged()) {
-                client.acknowledgePurchase(
-                        AcknowledgePurchaseParams.newBuilder().setPurchaseToken(p.getPurchaseToken()).build(),
-                        new com.android.billingclient.api.AcknowledgePurchaseResponseListener() {
+            if (p.getProducts().contains(PRODUCT_ID)) {
+                if (!p.isAcknowledged()) {
+                    client.acknowledgePurchase(
+                            AcknowledgePurchaseParams.newBuilder().setPurchaseToken(p.getPurchaseToken()).build(),
+                            new com.android.billingclient.api.AcknowledgePurchaseResponseListener() {
+                                @Override
+                                public void onAcknowledgePurchaseResponse(BillingResult r) {
+                                }
+                            });
+                }
+                Prefs.setPro(true);
+                continue;
+            }
+            int amount = 0;
+            for (int i = 0; i < COIN_IDS.length; i++) {
+                if (p.getProducts().contains(COIN_IDS[i])) amount = COIN_AMOUNTS[i];
+            }
+            if (amount > 0) {
+                final int give = amount;
+                client.consumeAsync(ConsumeParams.newBuilder().setPurchaseToken(p.getPurchaseToken()).build(),
+                        new ConsumeResponseListener() {
                             @Override
-                            public void onAcknowledgePurchaseResponse(BillingResult r) {
+                            public void onConsumeResponse(BillingResult r, String token) {
+                                if (r.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                                    Economy.addCoins(give);
+                                    notifyListeners();
+                                }
                             }
                         });
             }
-            Prefs.setPro(true);
         }
         notifyListeners();
+    }
+
+    public String priceOf(String productId) {
+        ProductDetails d = all.get(productId);
+        if (d == null) return null;
+        ProductDetails.OneTimePurchaseOfferDetails o = d.getOneTimePurchaseOfferDetails();
+        return o == null ? null : o.getFormattedPrice();
+    }
+
+    public boolean buy(Activity a, String productId) {
+        ProductDetails d = all.get(productId);
+        if (d == null || !client.isReady()) {
+            connect();
+            return false;
+        }
+        BillingFlowParams.ProductDetailsParams pdp = BillingFlowParams.ProductDetailsParams.newBuilder()
+                .setProductDetails(d).build();
+        BillingFlowParams flow = BillingFlowParams.newBuilder()
+                .setProductDetailsParamsList(Collections.singletonList(pdp)).build();
+        return client.launchBillingFlow(a, flow).getResponseCode() == BillingClient.BillingResponseCode.OK;
     }
 
     public boolean canBuy() {

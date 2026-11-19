@@ -74,7 +74,7 @@
     <string name="pro_locked_theme">This theme is in Pro</string>
 
     <string name="pro_title">Backgammon Pro</string>
-    <string name="pro_features">• No ads\n• Unlimited hints and undo\n• 4 extra board themes\n• Detailed statistics\n\nOne-time payment, no subscription.</string>
+    <string name="pro_features">• No ads\n• Unlimited hints and undo\n• All dice, checkers, boards and avatars unlocked\n• 2x coin rewards\n• Detailed statistics\n\nOne-time payment, no subscription.</string>
     <string name="pro_buy_fmt">Buy (%1$s)</string>
     <string name="pro_buy">Buy</string>
     <string name="pro_restore">Restore purchase</string>

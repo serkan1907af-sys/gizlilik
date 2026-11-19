@@ -47,6 +47,7 @@ public class GameActivity extends Activity implements SensorEventListener {
     private int freeUndo = 1;
     private int freeHint = 1;
     private boolean finished = false;
+    private int humanHits = 0;
 
     private SensorManager sm;
     private Sensor accel;
@@ -58,7 +59,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         level = getIntent().getIntExtra("level", 2);
         int tid = Prefs.theme();
         theme = BoardTheme.get(tid);
-        if (theme.pro && !Prefs.pro()) theme = BoardTheme.get(0);
+        if (!Economy.owns("b" + theme.id)) theme = BoardTheme.get(0);
 
         LinearLayout root = UiKit.vertical(this);
         root.setBackgroundColor(theme.bg);
@@ -80,6 +81,7 @@ public class GameActivity extends Activity implements SensorEventListener {
 
         bv = new BoardView(this);
         bv.setTheme(theme);
+        bv.setSkins(Economy.equipped(Economy.DICE), Economy.equipped(Economy.CHECKER));
         bv.setListener(new BoardView.Listener() {
             @Override
             public void onRollRequested() {
@@ -94,7 +96,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         root.addView(bv, UiKit.lpWeight(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         tvYou = UiKit.text(this, "", 15, theme.text, true);
-        cardYou = makeCard("🙂", tvYou);
+        cardYou = makeCard(Economy.equipped(Economy.AVATAR).emoji, tvYou);
         root.addView(cardYou, UiKit.lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         tvStatus = UiKit.text(this, "", 17, Color.BLACK, true);
@@ -197,6 +199,7 @@ public class GameActivity extends Activity implements SensorEventListener {
 
     private void startNewGame() {
         finished = false;
+        humanHits = 0;
         freeUndo = 1;
         freeHint = 1;
         game = new Game();
@@ -306,6 +309,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         busy = true;
         boolean hit = game.play(m);
         if (hit) {
+            humanHits++;
             Sfx.hit();
             saySomething(say.nextBoolean() ? R.string.say_got_hit_a : R.string.say_got_hit_b);
         } else Sfx.checker();
@@ -519,7 +523,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         if (game == null) return;
         tvCpu.setText(oppName() + " · " + getString(R.string.cpu) + "\n" + getString(R.string.pip_fmt,
                 game.board.pip(Game.CPU), game.board.off[Game.CPU]));
-        tvYou.setText(getString(R.string.you) + "   " + getString(R.string.pip_fmt,
+        tvYou.setText(Economy.name() + "\n" + getString(R.string.pip_fmt,
                 game.board.pip(Game.HUMAN), game.board.off[Game.HUMAN]));
         boolean humanTurn = game.turn == Game.HUMAN && !game.over;
         cardYou.setBackground(UiKit.card(this, humanTurn ? 0x66000000 : 0x33000000, theme.accent, humanTurn ? 2 : 0));
@@ -553,6 +557,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         final boolean gammon = game.winType == 1;
         Prefs.recordGame(level, humanWon, gammon, game.faceCount, game.doubles, game.rollCount);
         Prefs.finishedThisSession++;
+        Economy.Reward rw = Economy.onGameFinished(level, humanWon, gammon, humanHits, game.doubles[Game.HUMAN]);
         if (humanWon) Sfx.win();
         else Sfx.lose();
         saySomething(humanWon ? R.string.say_lose : R.string.say_win);
@@ -570,6 +575,20 @@ public class GameActivity extends Activity implements SensorEventListener {
             TextView g = UiKit.text(this, getString(R.string.gammon_note), 16, UiKit.GOLD, true);
             g.setGravity(Gravity.CENTER);
             box.addView(g);
+        }
+        TextView rewardTv = UiKit.text(this, "+" + rw.coins + " 🪙    +" + rw.xp + " XP", 20, UiKit.GOLD, true);
+        rewardTv.setGravity(Gravity.CENTER);
+        rewardTv.setPadding(0, UiKit.dp(this, 8), 0, 0);
+        box.addView(rewardTv);
+        if (rw.levelUp) {
+            TextView lv = UiKit.text(this, Economy.T("🎉 Seviye atladın: ", "🎉 Level up: ") + rw.newLevel + Economy.T("  (+50 🪙 bonus)", "  (+50 🪙 bonus)"), 15, UiKit.CREAM, true);
+            lv.setGravity(Gravity.CENTER);
+            box.addView(lv);
+        }
+        if (Economy.anythingToClaim()) {
+            TextView ms = UiKit.text(this, Economy.T("🎯 Alınacak görev ödülün var (Menü > Görevler)", "🎯 You have mission rewards to claim (Menu > Missions)"), 12, UiKit.MUTED, false);
+            ms.setGravity(Gravity.CENTER);
+            box.addView(ms);
         }
         box.addView(UiKit.spacer(this, 10));
 
