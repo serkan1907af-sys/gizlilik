@@ -316,8 +316,8 @@ public class TouchOverlay extends View {
 
     /** Ekran klavyesi: rakamlar, harfler, ESC, Enter, bosluk, ~ (Quake konsolu). */
     private void buildKeyboard(int w, int h) {
-        float top = h * 0.40f, pad = 3 * d;
-        float rowH = (h - top - 8 * d) / 5f;
+        float top = h * 0.32f, pad = 3 * d;
+        float rowH = (h - top - 8 * d) / 6f;
         float kw = Math.min(64 * d, (w - 24 * d) / 10f);
         float x0 = (w - 10 * kw) / 2f;
         String[] rows = {"1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm"};
@@ -341,6 +341,12 @@ public class TouchOverlay extends View {
         addKey("/", '/', ACT_NONE, x0 + 3 * kw + pad, t5 + pad, x0 + 4 * kw - pad, t5 + rowH - pad);
         addKey("BOŞLUK", ' ', ACT_NONE, x0 + 4 * kw + pad, t5 + pad, x0 + 8 * kw - pad, t5 + rowH - pad);
         addKey("KAPAT", 0, ACT_CLOSE_MENU, x0 + 8 * kw + pad, t5 + pad, x0 + 10 * kw - pad, t5 + rowH - pad);
+        float t6 = top + 5 * rowH;
+        String[] ar = {"◀", "▲", "▼", "▶"};
+        int[] ac = {276, 273, 274, 275};
+        for (int i = 0; i < 4; i++)
+            addKey(ar[i], ac[i], ACT_NONE, x0 + 2 * i * kw + pad, t6 + pad, x0 + 2 * (i + 1) * kw - pad, t6 + rowH - pad);
+        addKey("TAMAM ↵", 13, ACT_NONE, x0 + 8 * kw + pad, t6 + pad, x0 + 10 * kw - pad, t6 + rowH - pad);
     }
 
     @Override
