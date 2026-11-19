@@ -211,6 +211,23 @@ public class SettingsActivity extends Activity {
 
         for (String k : Actions.ALL_KINDS) bindCard(k, Actions.kindName(k) + " tuş atamaları");
 
+        LinearLayout lic = card("Lisanslar ve kaynak kod");
+        note(lic, "Retro Oyun açık kaynak yazılımlar kullanır:\n"
+                + "• PrBoom (Doom, Heretic, Hexen motoru) – GPL v2 veya üstü\n"
+                + "• TyrQuake (Quake motoru) – GPL v2 veya üstü\n"
+                + "• libretro arayüzü – MIT\n"
+                + "• Freedoom (ücretsiz oyun verisi) – BSD 3 maddeli lisans\n\n"
+                + "Doom, Quake, Heretic ve Hexen ilgili hak sahiplerinin markalarıdır. Bu uygulama onlarla bağlantılı değildir; "
+                + "oyunların kendi dosyaları uygulamada yoktur, kendi kopyanı sen eklersin.");
+        lic.addView(button("Uygulamanın kaynak kodunu aç (GitHub)", false, v -> {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://github.com/serkan1907af-sys/gizlilik/tree/retro")));
+            } catch (Exception e) {
+                Toast.makeText(this, "Tarayıcı bulunamadı", Toast.LENGTH_SHORT).show();
+            }
+        }));
+
         sv.post(() -> sv.scrollTo(0, keep));
     }
 
