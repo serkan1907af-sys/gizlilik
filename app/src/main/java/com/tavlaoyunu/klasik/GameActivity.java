@@ -36,6 +36,8 @@ public class GameActivity extends Activity implements SensorEventListener {
     private BoardTheme theme;
     private TextView tvCpu, tvYou, tvStatus, tvCredits;
     private LinearLayout cardCpu, cardYou;
+    private TextView tvSay;
+    private final java.util.Random say = new java.util.Random();
     private Button btnUndo, btnHint, btnRoll;
 
     private final Handler h = new Handler(Looper.getMainLooper());
@@ -63,7 +65,17 @@ public class GameActivity extends Activity implements SensorEventListener {
         UiKit.applyInsets(root, 8);
 
         tvCpu = UiKit.text(this, "", 15, theme.text, true);
-        cardCpu = makeCard("🤖", tvCpu);
+        cardCpu = makeCard(level == 1 ? "🧒" : (level == 3 ? "🎩" : "🧔"), tvCpu);
+        tvSay = UiKit.text(this, "", 14, 0xFF222222, true);
+        tvSay.setBackground(UiKit.round(0xFFFFF3D6, 14, this));
+        int bp = UiKit.dp(this, 8);
+        tvSay.setPadding(bp * 2, bp / 2, bp * 2, bp / 2);
+        tvSay.setVisibility(View.INVISIBLE);
+        LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        sl.setMargins(UiKit.dp(this, 10), 0, 0, 0);
+        sl.gravity = Gravity.CENTER_VERTICAL;
+        tvSay.setGravity(Gravity.CENTER);
+        cardCpu.addView(tvSay, sl);
         root.addView(cardCpu, UiKit.lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         bv = new BoardView(this);
@@ -157,9 +169,29 @@ public class GameActivity extends Activity implements SensorEventListener {
         return card;
     }
 
-    private void setStatus(int res) {
-        tvStatus.setText(res);
+    private String oppName() {
+        switch (level) {
+            case 1: return getString(R.string.opp_1);
+            case 3: return getString(R.string.opp_3);
+            default: return getString(R.string.opp_2);
+        }
     }
+
+    /** Rakip karakter kısa bir söz söyler (konuşma balonu). */
+    private void saySomething(int res) {
+        if (tvSay == null || destroyed) return;
+        tvSay.setText(res);
+        tvSay.setVisibility(View.VISIBLE);
+        h.removeCallbacks(hideSay);
+        h.postDelayed(hideSay, 2600);
+    }
+
+    private final Runnable hideSay = new Runnable() {
+        @Override
+        public void run() {
+            if (tvSay != null) tvSay.setVisibility(View.INVISIBLE);
+        }
+    };
 
     // ------------------------------------------------------------ oyun akışı
 
@@ -174,6 +206,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         updateButtons();
         busy = true;
         tvStatus.setText("");
+        saySomething(R.string.say_start);
         Sfx.diceRoll();
         bv.animateDice(new Runnable() {
             @Override
@@ -272,8 +305,10 @@ public class GameActivity extends Activity implements SensorEventListener {
     private void doHumanMove(Move m) {
         busy = true;
         boolean hit = game.play(m);
-        if (hit) Sfx.hit();
-        else Sfx.checker();
+        if (hit) {
+            Sfx.hit();
+            saySomething(say.nextBoolean() ? R.string.say_got_hit_a : R.string.say_got_hit_b);
+        } else Sfx.checker();
         updateButtons();
         bv.animateMove(Game.HUMAN, m, new Runnable() {
             @Override
@@ -333,6 +368,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         updateButtons();
         if (game.noMoves()) {
             tvStatus.setText(R.string.no_moves);
+            saySomething(R.string.say_nomove);
             h.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -344,6 +380,7 @@ public class GameActivity extends Activity implements SensorEventListener {
             return;
         }
         tvStatus.setText(R.string.cpu_thinking);
+        if (game.d1 == game.d2) saySomething(R.string.say_double);
         final int lv = level;
         exec.execute(new Runnable() {
             @Override
@@ -377,8 +414,10 @@ public class GameActivity extends Activity implements SensorEventListener {
         }
         Move m = plan.get(i);
         boolean hit = game.play(m);
-        if (hit) Sfx.hit();
-        else Sfx.checker();
+        if (hit) {
+            Sfx.hit();
+            saySomething(say.nextBoolean() ? R.string.say_hit_a : R.string.say_hit_b);
+        } else Sfx.checker();
         bv.animateMove(Game.CPU, m, new Runnable() {
             @Override
             public void run() {
@@ -478,7 +517,7 @@ public class GameActivity extends Activity implements SensorEventListener {
 
     private void updateInfo() {
         if (game == null) return;
-        tvCpu.setText(getString(R.string.cpu) + "   " + getString(R.string.pip_fmt,
+        tvCpu.setText(oppName() + " · " + getString(R.string.cpu) + "\n" + getString(R.string.pip_fmt,
                 game.board.pip(Game.CPU), game.board.off[Game.CPU]));
         tvYou.setText(getString(R.string.you) + "   " + getString(R.string.pip_fmt,
                 game.board.pip(Game.HUMAN), game.board.off[Game.HUMAN]));
@@ -516,6 +555,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         Prefs.finishedThisSession++;
         if (humanWon) Sfx.win();
         else Sfx.lose();
+        saySomething(humanWon ? R.string.say_lose : R.string.say_win);
 
         LinearLayout box = UiKit.vertical(this);
         int pad = UiKit.dp(this, 18);

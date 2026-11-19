@@ -3,9 +3,9 @@
     <string name="app_name">Tavla</string>
     <string name="play">Oyna</string>
     <string name="level_title">Zorluk seç</string>
-    <string name="level_easy">Kolay</string>
-    <string name="level_medium">Orta</string>
-    <string name="level_hard">Zor</string>
+    <string name="level_easy">Kolay – Acemi Ali</string>
+    <string name="level_medium">Orta – Usta Kemal</string>
+    <string name="level_hard">Zor – Hoca Rıza</string>
     <string name="stats">İstatistikler</string>
     <string name="settings">Ayarlar</string>
     <string name="go_pro">Pro\'ya Geç</string>
@@ -82,4 +82,18 @@
     <string name="pro_error">Satın alma şu an kullanılamıyor</string>
     <string name="close">Kapat</string>
     <string name="ok">Tamam</string>
+
+    <string name="theme_purple">Mor Gece</string>
+    <string name="opp_1">Acemi Ali</string>
+    <string name="opp_2">Usta Kemal</string>
+    <string name="opp_3">Hoca Rıza</string>
+    <string name="say_start">Hadi başlayalım!</string>
+    <string name="say_hit_a">Hoop, yedim seni!</string>
+    <string name="say_hit_b">Pardon, taşını aldım 😏</string>
+    <string name="say_got_hit_a">Ah! Olsun, devam…</string>
+    <string name="say_got_hit_b">Eyvah, yedik!</string>
+    <string name="say_double">Çift geldi! 😎</string>
+    <string name="say_nomove">Oynayacak yerim yok…</string>
+    <string name="say_win">Güzel oyundu, bir daha?</string>
+    <string name="say_lose">Tebrikler, hakkını verdin!</string>
 </resources>

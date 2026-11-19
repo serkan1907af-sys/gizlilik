@@ -3,9 +3,9 @@
     <string name="app_name">Backgammon</string>
     <string name="play">Play</string>
     <string name="level_title">Choose difficulty</string>
-    <string name="level_easy">Easy</string>
-    <string name="level_medium">Medium</string>
-    <string name="level_hard">Hard</string>
+    <string name="level_easy">Easy – Rookie Sam</string>
+    <string name="level_medium">Medium – Max the Pro</string>
+    <string name="level_hard">Hard – Master Leo</string>
     <string name="stats">Statistics</string>
     <string name="settings">Settings</string>
     <string name="go_pro">Go Pro</string>
@@ -82,4 +82,18 @@
     <string name="pro_error">Purchase is not available right now</string>
     <string name="close">Close</string>
     <string name="ok">OK</string>
+
+    <string name="theme_purple">Purple Night</string>
+    <string name="opp_1">Rookie Sam</string>
+    <string name="opp_2">Max the Pro</string>
+    <string name="opp_3">Master Leo</string>
+    <string name="say_start">Let\'s play!</string>
+    <string name="say_hit_a">Gotcha!</string>
+    <string name="say_hit_b">Sorry, I took your checker 😏</string>
+    <string name="say_got_hit_a">Ouch! Okay, go on…</string>
+    <string name="say_got_hit_b">Oh no, I got hit!</string>
+    <string name="say_double">Doubles! 😎</string>
+    <string name="say_nomove">I can\'t move…</string>
+    <string name="say_win">Good game, again?</string>
+    <string name="say_lose">Congrats, well played!</string>
 </resources>
