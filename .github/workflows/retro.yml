@@ -27,6 +27,11 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/libretro/libretro-prboom.git "$RUNNER_TEMP/prboom"
           git clone --depth 1 https://github.com/libretro/tyrquake.git "$RUNNER_TEMP/tyrquake"
+          # Quake: QuakeC sanal makinesi "-0.0" degerini sifir saymiyor (OP_IF tamsayi bakiyor,
+          # OP_NOT_F kesirli bakiyor) ve player_stand1 <-> player_run sonsuz donguye girip
+          # "stack overflow" veriyor. Isaret bitini yok sayarak duzeltiyoruz (QuakeSpasm'daki gibi).
+          sed -i -E 's/if \(!a->_int\)$/if (!(a->_int \& 0x7fffffff))/; s/if \(a->_int\)$/if (a->_int \& 0x7fffffff)/' "$RUNNER_TEMP/tyrquake/common/pr_exec.c"
+          test "$(grep -c 0x7fffffff "$RUNNER_TEMP/tyrquake/common/pr_exec.c")" = "2" || { echo "pr_exec yamasi uygulanamadi"; exit 1; }
 
       - name: Freedoom ve motor verisini indir
         run: |
