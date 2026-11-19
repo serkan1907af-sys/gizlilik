@@ -150,18 +150,34 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         if (overlay != null) overlay.setPadHidden(hide);
     }
 
+    /** Hizli ve donmadan cikis: dongu durdurulur, ekran kapanir, islem birazdan sonlandirilir. */
+    private void quit() {
+        running = false;
+        paused = false;
+        finish();
+        new Thread(() -> {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException ignored) {
+            }
+            Process.killProcess(Process.myPid());
+        }, "quit").start();
+    }
+
     @Override
     protected void onDestroy() {
         running = false;
         super.onDestroy();
-        if (loop != null) {
-            try {
-                loop.join(2500);
-            } catch (InterruptedException ignored) {
+        if (isFinishing()) {
+            // Motoru beklemeden islemi kapat (motor kapanirken takilabiliyor).
+            if (loop != null) {
+                try {
+                    loop.join(300);
+                } catch (InterruptedException ignored) {
+                }
             }
+            Process.killProcess(Process.myPid());
         }
-        // Oyun ayri bir islemde calisiyor; temiz bir sonraki baslangic icin islemi kapat.
-        if (isFinishing()) Process.killProcess(Process.myPid());
     }
 
     @Override
@@ -179,7 +195,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                     } else if (which == 3) {
                         new AlertDialog.Builder(this)
                                 .setMessage("Oyundan çıkılsın mı?\n(Oyunun kendi menüsünden kaydetmediğin ilerleme kaybolur.)")
-                                .setPositiveButton("Çık", (d2, w2) -> finish())
+                                .setPositiveButton("Çık", (d2, w2) -> quit())
                                 .setNegativeButton("Devam", null)
                                 .show();
                     }
