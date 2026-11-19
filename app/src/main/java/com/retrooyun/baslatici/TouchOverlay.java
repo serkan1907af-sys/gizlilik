@@ -525,7 +525,7 @@ public class TouchOverlay extends View {
             }
             float k = m > 0f ? (float) Math.pow(m, 1.3) / m : 0f;
             rx = clampI(dx * k * 32767 * turnSens);
-            ry = clampI(dy * k * 32767 * turnSens * (invert ? -1f : 1f));
+            ry = clampI(dy * k * 32767 * turnSens * (invert ? 1f : -1f));
         } else {
             rx = 0;
             ry = 0;
