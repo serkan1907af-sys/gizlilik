@@ -112,6 +112,7 @@ public class TouchOverlay extends View {
     private void refreshFire() {
         for (Ctl c : controls)
             if (c.id.equals("fire")) c.label = menuOn && !editMode ? "TAMAM" : Actions.ctlLabel(kind, "fire");
+            else if (c.id.equals("use")) c.label = menuOn && !editMode ? "GERİ" : Actions.ctlLabel(kind, "use");
         invalidate();
     }
 
@@ -346,6 +347,7 @@ public class TouchOverlay extends View {
         }
         for (Ctl c : controls)
             if (c.id.equals("fire") && menuOn && !editMode) c.label = "TAMAM";
+            else if (c.id.equals("use") && menuOn && !editMode) c.label = "GERİ";
 
         buildKeyboard(w, h);
 
@@ -470,7 +472,10 @@ public class TouchOverlay extends View {
                     if (menuOn && !Actions.quake(kind)) Native.tapKey(c.id.equals("dp_up") ? 273 : 274); // Doom menusu: ok tuslari
                     if (menuOn) postDelayed(dpHoldRun, 350);
                     break;
-                case "use":
+                case "use": // menude GERI: Quake'te B dugmesi (publish), digerlerinde Backspace
+                    if (menuOn && !Actions.quake(kind)) Native.tapKey(8);
+                    leaveMenu();
+                    break;
                 case "jump":
                 case "run":
                 case "dp_left":
@@ -638,6 +643,10 @@ public class TouchOverlay extends View {
             if (!c.pressed) continue;
             if (c.id.equals("fire") && menuOn) {
                 if (Actions.quake(kind)) b |= Actions.A; // Quake menusunde sec
+                continue;
+            }
+            if (c.id.equals("use") && menuOn) {
+                if (Actions.quake(kind)) b |= Actions.B; // Quake menusunde bir geri
                 continue;
             }
             b |= c.mask;
