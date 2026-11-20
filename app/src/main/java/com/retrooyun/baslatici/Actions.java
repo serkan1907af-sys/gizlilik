@@ -141,14 +141,14 @@ final class Actions {
     // ---- ekran tuslari ----
     static String[] ctlIds(String kind) {
         if (quake(kind))
-            return new String[]{"stick", "fire", "use", "sl", "sr", "ok", "prev", "next", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
+            return new String[]{"stick", "fire", "use", "sl", "sr", "prev", "next", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
         if (hexen(kind))
-            return new String[]{"stick", "fire", "use", "run", "jump", "sl", "sr", "ok", "prev", "next",
+            return new String[]{"stick", "fire", "use", "run", "jump", "sl", "sr", "prev", "next",
                     "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
         if (heretic(kind))
-            return new String[]{"stick", "fire", "use", "run", "sl", "sr", "ok", "prev", "next",
+            return new String[]{"stick", "fire", "use", "run", "sl", "sr", "prev", "next",
                     "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
-        return new String[]{"stick", "fire", "use", "run", "sl", "sr", "ok", "prev", "next", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
+        return new String[]{"stick", "fire", "use", "run", "sl", "sr", "prev", "next", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
     }
 
     static boolean isPill(String id) {
@@ -174,7 +174,7 @@ final class Actions {
 
     static String ctlLabel(String kind, String id) {
         switch (id) {
-            case "fire":
+            case "fire": return "ATEŞ";
             case "ok": return "TAMAM";
             case "wpn": return "●";
             case "use": return quake(kind) ? "ZIPLA" : "AÇ";
@@ -216,7 +216,9 @@ final class Actions {
         switch (id) {
             case "sl":
             case "sr": return false;
-            case "next": return false;
+            case "next":
+            case "prev": return false;
+            case "map": return false;
             default: return true;
         }
     }

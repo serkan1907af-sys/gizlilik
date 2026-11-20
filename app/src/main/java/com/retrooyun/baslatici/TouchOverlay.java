@@ -96,8 +96,35 @@ public class TouchOverlay extends View {
         setFocusable(false);
     }
 
+    /** Oyunun kendi menusu acik mi (tahmini): TAMAM dugmesi yalnizca o zaman gorunur. */
+    private boolean menuOn;
+
+    /** Sagdaki ates dugmesi: oyunda ATES, menu acikken TAMAM. */
+    private void refreshFire() {
+        for (Ctl c : controls)
+            if (c.id.equals("fire")) c.label = menuOn && !editMode ? "TAMAM" : Actions.ctlLabel(kind, "fire");
+        invalidate();
+    }
+
+    private void leaveMenu() {
+        if (!menuOn) return;
+        menuOn = false;
+        refreshFire();
+    }
+
+    /** Yon tusu ▲/▼ uzun basili tutulursa yuruyorsun demektir: menu kapali. */
+    private final Runnable dpHoldRun = () -> {
+        for (Ctl c : controls)
+            if (c.pressed && (c.id.equals("dp_up") || c.id.equals("dp_down"))) {
+                leaveMenu();
+                publish();
+                return;
+            }
+    };
+
     public void setKind(String k) {
         kind = k;
+        menuOn = Actions.quake(k); // Quake menuyle acilir
         buildControls();
         invalidate();
     }
@@ -120,15 +147,15 @@ public class TouchOverlay extends View {
     }
 
     public void toggleMenu() {
-        mode = mode == MODE_GAME ? MODE_MENU : MODE_GAME;
-        postInvalidate();
+        menuOn = !menuOn;
+        refreshFire();
     }
 
     // ---- duzenleme arayuzu ----
     void setEditMode(boolean e) {
         editMode = e;
         grid = st.getb("grid", false);
-        invalidate();
+        refreshFire();
     }
 
     void setEditListener(EditListener l) {
@@ -281,12 +308,8 @@ public class TouchOverlay extends View {
             c.action = Actions.ctlAction(id);
             c.mask = Actions.mask(kind, c.action);
             c.mode = MODE_GAME;
-            c.act = id.equals("menu") ? ACT_OPEN_MENU : id.equals("kbd") ? ACT_OPEN_KBD : ACT_NONE;
+            c.act = id.equals("kbd") ? ACT_OPEN_KBD : ACT_NONE;
             c.key = Actions.keyFor(kind, c.action);
-            if (id.equals("ok")) { // Tamam: Quake'te A dugmesi (menu secimi), digerlerinde Enter
-                if (Actions.quake(kind)) c.mask = Actions.A;
-                else c.key = 13;
-            }
             if (Actions.quake(kind)) { // Quake menuleri yon dugmesiyle gezilir
                 if (id.equals("dp_up")) c.mask = Actions.UP;
                 else if (id.equals("dp_down")) c.mask = Actions.DOWN;
@@ -311,6 +334,8 @@ public class TouchOverlay extends View {
             layoutCtl(c);
             controls.add(c);
         }
+        for (Ctl c : controls)
+            if (c.id.equals("fire") && menuOn && !editMode) c.label = "TAMAM";
 
         buildKeyboard(w, h);
 
@@ -420,12 +445,34 @@ public class TouchOverlay extends View {
             } else if (c.key != 0) {
                 Native.tapKey(c.key);
             }
+            switch (c.id) {
+                case "menu":
+                    menuOn = !menuOn;
+                    refreshFire();
+                    break;
+                case "fire": // menude TAMAM: Quake'te A dugmesi (publish), digerlerinde Enter
+                    if (menuOn && !Actions.quake(kind)) Native.tapKey(13);
+                    break;
+                case "dp_up":
+                case "dp_down":
+                    if (menuOn) postDelayed(dpHoldRun, 350);
+                    break;
+                case "use":
+                case "jump":
+                case "run":
+                case "dp_left":
+                case "dp_right":
+                    leaveMenu();
+                    break;
+                default:
+            }
             if (c.act == ACT_OPEN_MENU) mode = MODE_MENU;
             else if (c.act == ACT_OPEN_KBD) mode = MODE_KBD;
             else if (c.act == ACT_CLOSE_MENU) mode = MODE_GAME;
             return;
         }
         if (mode != MODE_GAME) return;
+        leaveMenu(); // cubuk / bakis kullanildi: oyundasin
         boolean left = x < getWidth() * 0.45f;
         if (left) {
             if (stickId < 0) {
@@ -576,6 +623,10 @@ public class TouchOverlay extends View {
         int b = 0, strafe = 0;
         for (Ctl c : controls) {
             if (!c.pressed) continue;
+            if (c.id.equals("fire") && menuOn) {
+                if (Actions.quake(kind)) b |= Actions.A; // Quake menusunde sec
+                continue;
+            }
             b |= c.mask;
             if ("sl".equals(c.action)) strafe -= 32767;
             else if ("sr".equals(c.action)) strafe += 32767;
