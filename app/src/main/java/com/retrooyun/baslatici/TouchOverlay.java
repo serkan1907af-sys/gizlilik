@@ -268,7 +268,8 @@ public class TouchOverlay extends View {
             c.mask = Actions.mask(kind, c.action);
             c.mode = MODE_GAME;
             c.act = id.equals("menu") ? ACT_OPEN_MENU : id.equals("kbd") ? ACT_OPEN_KBD : ACT_NONE;
-            c.key = id.equals("back") ? 27 : Actions.keyFor(kind, c.action);
+            c.key = id.equals("back") && !Actions.quake(kind) ? 27 : Actions.keyFor(kind, c.action);
+            if (id.equals("back") && Actions.quake(kind)) c.mask = Actions.B; // Quake menuleri B dugmesiyle geri doner
             c.strip = id.equals("wpn");
             c.n = Actions.weaponCount(kind);
             c.round = !Actions.isPill(id) && !c.strip;
