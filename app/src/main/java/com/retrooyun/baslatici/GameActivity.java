@@ -79,9 +79,12 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             float up = gyroRot == Surface.ROTATION_90 ? wx : -wx;
             float right = gyroRot == Surface.ROTATION_90 ? -wy : wy;
             float gain = 12000f * Math.max(0.1f, st.geti("gyro.sens", 100) / 100f);
-            float x = -up * gain * (st.getb("gyro.invx", false) ? -1f : 1f);
+            // varsayilan: direksiyon gibi telefonu sag/sola yatirmak (ekran eksenindeki donus); saat yonu = saga don
+            boolean yaw = st.getb("gyro.yaw", false);
+            float turn = yaw ? -up : -e.values[2];
+            float x = turn * gain * (st.getb("gyro.invx", false) ? -1f : 1f);
             float y = right * gain * (st.getb("gyro.invy", false) ? -1f : 1f);
-            if (Math.abs(up) < 0.03f) x = 0;
+            if (Math.abs(turn) < 0.03f) x = 0;
             if (Math.abs(right) < 0.03f) y = 0;
             gyroSmoothX = gyroSmoothX * 0.5f + x * 0.5f;
             gyroSmoothY = gyroSmoothY * 0.5f + y * 0.5f;
@@ -125,6 +128,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
         overlay = new TouchOverlay(this);
         overlay.setKind(kind);
+        overlay.setOnBackLong(this::onBackPressed);
         root.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
 
         loading = new TextView(this);

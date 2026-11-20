@@ -67,6 +67,17 @@ public class TouchOverlay extends View {
     private float dragDx, dragDy;
     private boolean grid = false;
     private EditListener editListener;
+    private Runnable onBackLong;
+    private final Runnable backLongRun = () -> {
+        if (onBackLong != null) {
+            releaseAll();
+            onBackLong.run();
+        }
+    };
+
+    void setOnBackLong(Runnable r) {
+        onBackLong = r;
+    }
 
     /** Oyun is parcaciginin okudugu durum. */
     public volatile int buttons;
@@ -399,6 +410,7 @@ public class TouchOverlay extends View {
             } else if (c.key != 0) {
                 Native.tapKey(c.key);
             }
+            if (c.id.equals("back")) postDelayed(backLongRun, 600);
             if (c.act == ACT_OPEN_MENU) mode = MODE_MENU;
             else if (c.act == ACT_OPEN_KBD) mode = MODE_KBD;
             else if (c.act == ACT_CLOSE_MENU) mode = MODE_GAME;
@@ -460,6 +472,7 @@ public class TouchOverlay extends View {
     private void up(int id) {
         Ctl c = pointerCtl.get(id);
         if (c != null) {
+            if (c.id.equals("back")) removeCallbacks(backLongRun);
             c.pressed = false;
             pointerCtl.remove(id);
         }

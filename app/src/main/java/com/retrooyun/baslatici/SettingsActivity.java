@@ -190,9 +190,10 @@ public class SettingsActivity extends Activity {
         LinearLayout gy = card("Jiroskop (telefonu çevirerek bakma)");
         switchRow(gy, "Jiroskopla bak / nişan al", "gyro", false);
         seekRow(gy, "Jiroskop hassasiyeti", "gyro.sens", 20, 300, 100);
+        switchRow(gy, "Eski yöntem: telefonu yatay eksende çevirerek dön (varsayılan: direksiyon gibi sağa-sola yatır)", "gyro.yaw", false);
         switchRow(gy, "Yatay yönü ters çevir (sağa çevirince sola dönüyorsa)", "gyro.invx", false);
         switchRow(gy, "Dikey yönü ters çevir (Quake)", "gyro.invy", false);
-        note(gy, "Açınca telefonu hafifçe sağa-sola çevirerek dönersin, yukarı-aşağı eğerek (Quake'te) yukarı-aşağı bakarsın. "
+        note(gy, "Açınca telefonu direksiyon gibi sağa yatırınca sağa, sola yatırınca sola dönersin; üst kenarı kendine doğru/ileri eğerek (Quake'te) yukarı-aşağı bakarsın. "
                 + "Çubuk da çalışmaya devam eder, ikisi toplanır. Yönler ters çıkarsa yukarıdaki anahtarlarla düzelt.");
 
         LinearLayout ms = card("Harici mouse ve klavye");
