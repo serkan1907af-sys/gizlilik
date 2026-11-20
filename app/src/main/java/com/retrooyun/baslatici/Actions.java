@@ -141,14 +141,14 @@ final class Actions {
     // ---- ekran tuslari ----
     static String[] ctlIds(String kind) {
         if (quake(kind))
-            return new String[]{"stick", "fire", "use", "sl", "sr", "fire2", "prev", "next", "map", "menu", "wpn", "kbd", "back"};
+            return new String[]{"stick", "fire", "use", "sl", "sr", "fire2", "prev", "next", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
         if (hexen(kind))
             return new String[]{"stick", "fire", "use", "run", "jump", "sl", "sr", "fire2", "prev", "next",
-                    "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd", "back"};
+                    "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
         if (heretic(kind))
             return new String[]{"stick", "fire", "use", "run", "sl", "sr", "fire2", "prev", "next",
-                    "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd", "back"};
-        return new String[]{"stick", "fire", "use", "run", "sl", "sr", "fire2", "prev", "next", "map", "menu", "wpn", "kbd", "back"};
+                    "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
+        return new String[]{"stick", "fire", "use", "run", "sl", "sr", "fire2", "prev", "next", "map", "menu", "wpn", "kbd", "dp_up", "dp_down", "dp_left", "dp_right"};
     }
 
     static boolean isPill(String id) {
@@ -160,8 +160,7 @@ final class Actions {
             case "inv_l":
             case "inv_r":
             case "item":
-            case "kbd":
-            case "back": return true;
+            case "kbd": return true;
             default: return false;
         }
     }
@@ -169,7 +168,7 @@ final class Actions {
     /** Ekran tusunun tetikledigi islev. */
     static String ctlAction(String id) {
         if (id.equals("fire2")) return "fire";
-        if (id.equals("stick") || id.equals("wpn") || id.equals("kbd") || id.equals("back")) return null;
+        if (id.equals("stick") || id.equals("wpn") || id.equals("kbd") || id.startsWith("dp_")) return null;
         return id;
     }
 
@@ -190,7 +189,10 @@ final class Actions {
             case "inv_r": return "EŞYA ›";
             case "item": return "KULLAN";
             case "kbd": return "KLAVYE";
-            case "back": return "◀ GERİ";
+            case "dp_up": return "▲";
+            case "dp_down": return "▼";
+            case "dp_left": return "◀";
+            case "dp_right": return "▶";
             case "wpn": return "SİLAH";
             default: return "ÇUBUK";
         }
@@ -201,7 +203,10 @@ final class Actions {
             case "stick": return "Hareket çubuğu";
             case "fire2": return "Ateş (ikinci tuş)";
             case "kbd": return "Klavye düğmesi";
-            case "back": return "Geri düğmesi (menüden çık)";
+            case "dp_up": return "Yön tuşu ▲ (ileri / menüde yukarı)";
+            case "dp_down": return "Yön tuşu ▼ (geri / menüde aşağı)";
+            case "dp_left": return "Yön tuşu ◀ (sola dön)";
+            case "dp_right": return "Yön tuşu ▶ (sağa dön)";
             case "wpn": return "Silah seçme şeridi (1, 2, 3…)";
             default: return label(kind, id);
         }
@@ -210,8 +215,7 @@ final class Actions {
     static boolean ctlDefaultVisible(String kind, String id) {
         switch (id) {
             case "sl":
-            case "sr":
-            case "wpn": return false;
+            case "sr": return false;
             case "fire2": return quake(kind);
             default: return true;
         }

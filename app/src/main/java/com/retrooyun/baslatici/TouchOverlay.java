@@ -212,15 +212,18 @@ public class TouchOverlay extends View {
             case "sr": return new float[]{w - 215 * d, h - 150 * d, 32 * d};
             case "fire2": return new float[]{w - 62 * d, 62 * d, 44 * d};
             case "jump": return new float[]{w - 150 * d, h - 205 * d, 32 * d};
-            case "wpn": return new float[]{cx, 80 * d, 0};
+            case "wpn": return new float[]{cx, 20 * d, 0};
             case "prev": return new float[]{32 * d, 22 * d, 0};
             case "next": return new float[]{88 * d, 22 * d, 0};
             case "menu": return new float[]{144 * d, 22 * d, 0};
             case "kbd": return new float[]{200 * d, 22 * d, 0};
-            case "back": return new float[]{32 * d, 56 * d, 0};
-            case "inv_l": return new float[]{32 * d, 90 * d, 0};
-            case "item": return new float[]{88 * d, 90 * d, 0};
-            case "inv_r": return new float[]{144 * d, 90 * d, 0};
+            case "dp_up": return new float[]{96 * d, 96 * d, 22 * d};
+            case "dp_down": return new float[]{96 * d, 184 * d, 22 * d};
+            case "dp_left": return new float[]{52 * d, 140 * d, 22 * d};
+            case "dp_right": return new float[]{140 * d, 140 * d, 22 * d};
+            case "inv_l": return new float[]{32 * d, 56 * d, 0};
+            case "item": return new float[]{88 * d, 56 * d, 0};
+            case "inv_r": return new float[]{144 * d, 56 * d, 0};
             default: return new float[]{256 * d, 22 * d, 0}; // map
         }
     }
@@ -279,8 +282,11 @@ public class TouchOverlay extends View {
             c.mask = Actions.mask(kind, c.action);
             c.mode = MODE_GAME;
             c.act = id.equals("menu") ? ACT_OPEN_MENU : id.equals("kbd") ? ACT_OPEN_KBD : ACT_NONE;
-            c.key = id.equals("back") && !Actions.quake(kind) ? 27 : Actions.keyFor(kind, c.action);
-            if (id.equals("back") && Actions.quake(kind)) c.mask = Actions.B; // Quake menuleri B dugmesiyle geri doner
+            c.key = Actions.keyFor(kind, c.action);
+            if (Actions.quake(kind)) { // Quake menuleri yon dugmesiyle gezilir
+                if (id.equals("dp_up")) c.mask = Actions.UP;
+                else if (id.equals("dp_down")) c.mask = Actions.DOWN;
+            }
             c.strip = id.equals("wpn");
             c.n = Actions.weaponCount(kind);
             c.round = !Actions.isPill(id) && !c.strip;
@@ -297,6 +303,7 @@ public class TouchOverlay extends View {
                 c.cx = df[0];
                 c.cy = df[1];
                 if (Actions.isPill(id)) c.scale = 0.62f;
+                else if (id.equals("wpn")) c.scale = 0.75f;
             }
             layoutCtl(c);
             controls.add(c);
@@ -410,7 +417,6 @@ public class TouchOverlay extends View {
             } else if (c.key != 0) {
                 Native.tapKey(c.key);
             }
-            if (c.id.equals("back")) postDelayed(backLongRun, 600);
             if (c.act == ACT_OPEN_MENU) mode = MODE_MENU;
             else if (c.act == ACT_OPEN_KBD) mode = MODE_KBD;
             else if (c.act == ACT_CLOSE_MENU) mode = MODE_GAME;
@@ -472,7 +478,6 @@ public class TouchOverlay extends View {
     private void up(int id) {
         Ctl c = pointerCtl.get(id);
         if (c != null) {
-            if (c.id.equals("back")) removeCallbacks(backLongRun);
             c.pressed = false;
             pointerCtl.remove(id);
         }
@@ -597,6 +602,7 @@ public class TouchOverlay extends View {
             ry = 0;
             lx = clampI(strafe);
             ly = nly;
+            applyDpad();
             return;
         }
         lx = clampI(nlx + strafe);
@@ -616,6 +622,21 @@ public class TouchOverlay extends View {
         } else {
             rx = 0;
             ry = 0;
+        }
+        applyDpad();
+    }
+
+    /** Ekrandaki yon tuslari: ileri / geri / saga don / sola don. */
+    private void applyDpad() {
+        for (Ctl c : controls) {
+            if (!c.pressed) continue;
+            switch (c.id) {
+                case "dp_up": ly = -32767; break;
+                case "dp_down": ly = 32767; break;
+                case "dp_left": rx = clampI(-32767 * 0.75 * turnSens); break;
+                case "dp_right": rx = clampI(32767 * 0.75 * turnSens); break;
+                default:
+            }
         }
     }
 
