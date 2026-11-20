@@ -188,7 +188,7 @@ public class SettingsActivity extends Activity {
         choiceRow(t, "Sağ tarafa çift dokunuş", Actions.DT_NAMES, Actions.DT_IDS, "dt.right", "none");
         note(t, "Çift dokunuş: boş bir yere hızlıca iki kez dokun, ikinci dokunuşta parmağını basılı tutarsan işlev basılı kalır.");
         LinearLayout gy = card("Jiroskop (telefonu çevirerek bakma)");
-        switchRow(gy, "Jiroskopla bak / nişan al", "gyro", false);
+        switchRow(gy, "Jiroskopla bak / nişan al", "gyro2", false);
         seekRow(gy, "Jiroskop hassasiyeti", "gyro.sens", 20, 300, 100);
         switchRow(gy, "Yukarı-aşağı bakmayı da jiroskopla yap (Quake, telefonu öne-arkaya eğ)", "gyro.pitch", false);
         switchRow(gy, "Yatay yönü ters çevir (sağa çevirince sola dönüyorsa)", "gyro.invx", false);

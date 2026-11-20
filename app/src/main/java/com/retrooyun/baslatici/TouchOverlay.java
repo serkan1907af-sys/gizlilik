@@ -210,9 +210,9 @@ public class TouchOverlay extends View {
             case "run": return new float[]{w - 62 * d, h - 205 * d, 36 * d};
             case "sl": return new float[]{w - 290 * d, h - 62 * d, 32 * d};
             case "sr": return new float[]{w - 215 * d, h - 150 * d, 32 * d};
-            case "fire2": return new float[]{w - 62 * d, 62 * d, 44 * d};
+            case "ok": return new float[]{w - 62 * d, 62 * d, 44 * d};
             case "jump": return new float[]{w - 150 * d, h - 205 * d, 32 * d};
-            case "wpn": return new float[]{cx, 20 * d, 0};
+            case "wpn": return new float[]{cx, 34 * d, 20 * d};
             case "prev": return new float[]{32 * d, 22 * d, 0};
             case "next": return new float[]{88 * d, 22 * d, 0};
             case "menu": return new float[]{144 * d, 22 * d, 0};
@@ -283,11 +283,15 @@ public class TouchOverlay extends View {
             c.mode = MODE_GAME;
             c.act = id.equals("menu") ? ACT_OPEN_MENU : id.equals("kbd") ? ACT_OPEN_KBD : ACT_NONE;
             c.key = Actions.keyFor(kind, c.action);
+            if (id.equals("ok")) { // Tamam: Quake'te A dugmesi (menu secimi), digerlerinde Enter
+                if (Actions.quake(kind)) c.mask = Actions.A;
+                else c.key = 13;
+            }
             if (Actions.quake(kind)) { // Quake menuleri yon dugmesiyle gezilir
                 if (id.equals("dp_up")) c.mask = Actions.UP;
                 else if (id.equals("dp_down")) c.mask = Actions.DOWN;
             }
-            c.strip = id.equals("wpn");
+            c.strip = false;
             c.n = Actions.weaponCount(kind);
             c.round = !Actions.isPill(id) && !c.strip;
             c.editable = true;
@@ -303,7 +307,6 @@ public class TouchOverlay extends View {
                 c.cx = df[0];
                 c.cy = df[1];
                 if (Actions.isPill(id)) c.scale = 0.62f;
-                else if (id.equals("wpn")) c.scale = 0.75f;
             }
             layoutCtl(c);
             controls.add(c);

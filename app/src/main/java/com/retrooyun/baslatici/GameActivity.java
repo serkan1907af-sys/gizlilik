@@ -207,7 +207,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         inputManager = (InputManager) getSystemService(INPUT_SERVICE);
         if (inputManager != null) inputManager.registerInputDeviceListener(devListener, null);
         refreshPads();
-        gyroOn = st.getb("gyro", false);
+        gyroOn = st.getb("gyro2", false);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (gyroOn && sensorManager != null) {
             Sensor g = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
