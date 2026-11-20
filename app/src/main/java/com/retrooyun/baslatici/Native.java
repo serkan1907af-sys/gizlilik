@@ -35,6 +35,9 @@ public final class Native {
     /** Motora klavye tusu gonderir (RETROK_* kodu, ornegin '1' = 49). */
     public static native void tapKey(int retrok);
 
+    /** Oyunun kendi menusu acik mi: 1 evet, 0 hayir, -1 bilinmiyor. */
+    public static native int menuOpen();
+
     public static native String lastError();
 
     public static native boolean copyFrame(Bitmap bitmap);

@@ -26,6 +26,7 @@ double host_sample_rate(void);
 int    host_frame_count(void);
 int    host_shutdown_requested(void);
 void   host_tap_key(unsigned retrok);
+int    host_menu_open(void);
 
 /* Copies the last video frame as RGBA bytes (R,G,B,A in memory order).
  * dst_stride_px is the row length of dst in pixels. */

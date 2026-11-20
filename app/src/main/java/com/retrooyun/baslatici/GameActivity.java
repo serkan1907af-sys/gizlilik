@@ -420,6 +420,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                 }
                 Native.setInput(overlay.buttons | padButtons | padAxisButtons | keyMask | kbBits | mouseBits | wb, lx, ly, rx, ry);
                 Native.run();
+                int mo = Native.menuOpen();
+                if (mo >= 0 && overlay != null) overlay.setMenuOpen(mo == 1);
                 if (Native.shutdownRequested()) {
                     runOnUiThread(this::quit); // oyunun kendi menusunden "Quit Game"
                     running = false;

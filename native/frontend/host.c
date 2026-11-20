@@ -58,6 +58,7 @@ static int g_shutdown = 0;
 #define TAPQ 64
 static int g_keys[KEY_MAX];
 static retro_keyboard_event_t g_kbcb = NULL;
+static int (*g_menu_open)(void) = NULL;
 static volatile unsigned g_tapq[TAPQ];
 static volatile unsigned g_tap_head = 0, g_tap_tail = 0; /* tek uretici, tek tuketici */
 static unsigned g_tap_code = 0;
@@ -324,6 +325,7 @@ int host_load_core(const char *core_path, const char *system_dir, const char *sa
 
     core.handle = dlopen(core_path, RTLD_NOW | RTLD_LOCAL);
     if (!core.handle) { set_error("dlopen failed: %s", dlerror()); return 0; }
+    *(void **)(&g_menu_open) = dlsym(core.handle, "retro_host_menu_open"); /* istege bagli */
 
     LOADSYM(retro_init);
     LOADSYM(retro_deinit);
@@ -420,6 +422,12 @@ void host_set_input(uint32_t buttons, int lx, int ly, int rx, int ry)
     g_ax[0][1] = ly;
     g_ax[1][0] = rx;
     g_ax[1][1] = ry;
+}
+
+int host_menu_open(void)
+{
+    if (!g_loaded_game || !g_menu_open) return -1;
+    return g_menu_open() ? 1 : 0;
 }
 
 void host_tap_key(unsigned code)

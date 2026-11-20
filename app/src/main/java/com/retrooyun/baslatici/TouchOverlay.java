@@ -97,7 +97,16 @@ public class TouchOverlay extends View {
     }
 
     /** Oyunun kendi menusu acik mi (tahmini): TAMAM dugmesi yalnizca o zaman gorunur. */
-    private boolean menuOn;
+    private volatile boolean menuOn;
+    private volatile boolean menuKnown; // motor menu durumunu bildiriyorsa tahmin yapilmaz
+
+    /** Oyun dongusunden: motorun bildirdigi menu durumu. */
+    void setMenuOpen(boolean open) {
+        menuKnown = true;
+        if (menuOn == open) return;
+        menuOn = open;
+        post(this::refreshFire);
+    }
 
     /** Sagdaki ates dugmesi: oyunda ATES, menu acikken TAMAM. */
     private void refreshFire() {
@@ -107,7 +116,7 @@ public class TouchOverlay extends View {
     }
 
     private void leaveMenu() {
-        if (!menuOn) return;
+        if (menuKnown || !menuOn) return;
         menuOn = false;
         refreshFire();
     }
@@ -147,6 +156,7 @@ public class TouchOverlay extends View {
     }
 
     public void toggleMenu() {
+        if (menuKnown) return;
         menuOn = !menuOn;
         refreshFire();
     }
@@ -447,14 +457,17 @@ public class TouchOverlay extends View {
             }
             switch (c.id) {
                 case "menu":
-                    menuOn = !menuOn;
-                    refreshFire();
+                    if (!menuKnown) {
+                        menuOn = !menuOn;
+                        refreshFire();
+                    }
                     break;
                 case "fire": // menude TAMAM: Quake'te A dugmesi (publish), digerlerinde Enter
                     if (menuOn && !Actions.quake(kind)) Native.tapKey(13);
                     break;
                 case "dp_up":
                 case "dp_down":
+                    if (menuOn && !Actions.quake(kind)) Native.tapKey(c.id.equals("dp_up") ? 273 : 274); // Doom menusu: ok tuslari
                     if (menuOn) postDelayed(dpHoldRun, 350);
                     break;
                 case "use":
