@@ -194,7 +194,6 @@ final class Actions {
             case "dp_down": return "▼";
             case "dp_left": return "◀";
             case "dp_right": return "▶";
-            case "wpn": return "SİLAH";
             default: return "ÇUBUK";
         }
     }
