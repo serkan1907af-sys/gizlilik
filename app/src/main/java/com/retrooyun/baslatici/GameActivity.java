@@ -69,27 +69,50 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private SensorManager sensorManager;
     private volatile boolean gyroOn = false;
     private volatile int gyroRx, gyroRy;
+    private volatile float gravX, gravY, gravZ;
+    private final SensorEventListener gravListener = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent e) {
+            if (e.sensor.getType() == Sensor.TYPE_GRAVITY) {
+                gravX = e.values[0];
+                gravY = e.values[1];
+                gravZ = e.values[2];
+            } else { // ivmeolcer: yumusatilmis yercekimi
+                gravX = gravX * 0.9f + e.values[0] * 0.1f;
+                gravY = gravY * 0.9f + e.values[1] * 0.1f;
+                gravZ = gravZ * 0.9f + e.values[2] * 0.1f;
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        }
+    };
     private float gyroSmoothX, gyroSmoothY;
     private int gyroRot = Surface.ROTATION_90;
     private final SensorEventListener gyroListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent e) {
-            float wx = e.values[0], wy = e.values[1];
-            // ekranin yukari/saga eksenleri, telefonun donus yonune gore cihaz eksenlerinden bulunur
-            float up = gyroRot == Surface.ROTATION_90 ? wx : -wx;
-            float right = gyroRot == Surface.ROTATION_90 ? -wy : wy;
+            float wx = e.values[0], wy = e.values[1], wz = e.values[2];
+            // Yatay donus: dunyanin dikey ekseni etrafinda donus hizi (yercekimi yonune gore).
+            // Telefon nasil tutulursa tutulsun saga cevirince saga, sola cevirince sola doner.
+            float gx = gravX, gy = gravY, gz = gravZ;
+            float gl = (float) Math.sqrt(gx * gx + gy * gy + gz * gz);
+            float turnRate;
+            if (gl > 1f) turnRate = -(wx * gx + wy * gy + wz * gz) / gl; // saat yonu (yukaridan bakinca) = saga
+            else turnRate = -wz;
             float gain = 12000f * Math.max(0.1f, st.geti("gyro.sens", 100) / 100f);
-            // varsayilan: direksiyon gibi telefonu sag/sola yatirmak (ekran eksenindeki donus); saat yonu = saga don
-            boolean yaw = st.getb("gyro.yaw", false);
-            float turn = yaw ? -up : -e.values[2];
-            float x = turn * gain * (st.getb("gyro.invx", false) ? -1f : 1f);
-            float y = right * gain * (st.getb("gyro.invy", false) ? -1f : 1f);
-            if (Math.abs(turn) < 0.03f) x = 0;
-            if (Math.abs(right) < 0.03f) y = 0;
+            float x = turnRate * gain * (st.getb("gyro.invx", false) ? -1f : 1f);
+            if (Math.abs(turnRate) < 0.03f) x = 0;
+            // Yukari-asagi bakma yalnizca ayarda acikca acilirsa
+            float pitch = gyroRot == Surface.ROTATION_90 ? -wy : wy;
+            float y = pitch * gain * (st.getb("gyro.invy", false) ? -1f : 1f);
+            if (Math.abs(pitch) < 0.03f) y = 0;
             gyroSmoothX = gyroSmoothX * 0.5f + x * 0.5f;
             gyroSmoothY = gyroSmoothY * 0.5f + y * 0.5f;
             gyroRx = (int) Math.max(-32767f, Math.min(32767f, gyroSmoothX));
-            gyroRy = Actions.quake(kind) ? (int) Math.max(-32767f, Math.min(32767f, gyroSmoothY)) : 0;
+            gyroRy = Actions.quake(kind) && st.getb("gyro.pitch", false)
+                    ? (int) Math.max(-32767f, Math.min(32767f, gyroSmoothY)) : 0;
         }
 
         @Override
@@ -163,7 +186,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     protected void onPause() {
         paused = true;
         if (inputManager != null) inputManager.unregisterInputDeviceListener(devListener);
-        if (sensorManager != null) sensorManager.unregisterListener(gyroListener);
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(gyroListener);
+            sensorManager.unregisterListener(gravListener);
+        }
         gyroRx = 0;
         gyroRy = 0;
         held.clear();
@@ -188,6 +214,9 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             if (g != null) {
                 gyroRot = getWindowManager().getDefaultDisplay().getRotation();
                 sensorManager.registerListener(gyroListener, g, SensorManager.SENSOR_DELAY_GAME);
+                Sensor gr = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+                if (gr == null) gr = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                if (gr != null) sensorManager.registerListener(gravListener, gr, SensorManager.SENSOR_DELAY_GAME);
             } else {
                 gyroOn = false;
             }
