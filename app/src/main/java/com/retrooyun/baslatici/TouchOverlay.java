@@ -202,14 +202,14 @@ public class TouchOverlay extends View {
             case "fire2": return new float[]{w - 62 * d, 62 * d, 44 * d};
             case "jump": return new float[]{w - 150 * d, h - 205 * d, 32 * d};
             case "wpn": return new float[]{cx, 80 * d, 0};
-            case "kbd": return new float[]{cx + 230 * d, 30 * d, 0};
-            case "inv_l": return new float[]{cx - 230 * d, 30 * d, 0};
-            case "item": return new float[]{cx - 322 * d, 30 * d, 0};
-            case "inv_r": return new float[]{cx - 414 * d, 30 * d, 0};
-            case "prev": return new float[]{cx - 138 * d, 30 * d, 0};
-            case "menu": return new float[]{cx - 46 * d, 30 * d, 0};
-            case "next": return new float[]{cx + 46 * d, 30 * d, 0};
-            default: return new float[]{cx + 138 * d, 30 * d, 0}; // map
+            case "prev": return new float[]{32 * d, 22 * d, 0};
+            case "next": return new float[]{88 * d, 22 * d, 0};
+            case "menu": return new float[]{144 * d, 22 * d, 0};
+            case "kbd": return new float[]{200 * d, 22 * d, 0};
+            case "inv_l": return new float[]{32 * d, 56 * d, 0};
+            case "item": return new float[]{88 * d, 56 * d, 0};
+            case "inv_r": return new float[]{144 * d, 56 * d, 0};
+            default: return new float[]{256 * d, 22 * d, 0}; // map
         }
     }
 
@@ -283,6 +283,7 @@ public class TouchOverlay extends View {
             } else {
                 c.cx = df[0];
                 c.cy = df[1];
+                if (Actions.isPill(id)) c.scale = 0.62f;
             }
             layoutCtl(c);
             controls.add(c);

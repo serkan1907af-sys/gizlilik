@@ -207,7 +207,8 @@ final class Actions {
     static boolean ctlDefaultVisible(String kind, String id) {
         switch (id) {
             case "sl":
-            case "sr": return false;
+            case "sr":
+            case "wpn": return false;
             case "fire2": return quake(kind);
             default: return true;
         }
