@@ -60,6 +60,11 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private volatile int keyMask, keyStrafe;
     private InputManager inputManager;
 
+    // harici klavye ve mouse
+    private volatile int kbBits, kbDirs; // kbDirs: 1=ileri 2=geri 4=sol 8=sag
+    private volatile float mouseDx, mouseDy;
+    private volatile int mouseBits, wheelFrames, wheelBits;
+
     // jiroskop: telefonu cevirerek bakma / nisan alma
     private SensorManager sensorManager;
     private volatile boolean gyroOn = false;
@@ -160,6 +165,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         held.clear();
         keyMask = 0;
         keyStrafe = 0;
+        freeMouse();
         super.onPause();
     }
 
@@ -361,7 +367,25 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                 int lx = pick(overlay.lx, padLx);
                 int ly = pick(overlay.ly, padLy);
                 lx = (int) Math.max(-32767, Math.min(32767, lx + keyStrafe));
-                Native.setInput(overlay.buttons | padButtons | padAxisButtons | keyMask, lx, ly, rx, ry);
+                int kd = kbDirs;
+                if ((kd & 4) != 0) lx = (int) Math.max(-32767, lx - 32767);
+                if ((kd & 8) != 0) lx = (int) Math.min(32767, lx + 32767);
+                if ((kd & 1) != 0) ly = -32767;
+                if ((kd & 2) != 0) ly = 32767;
+                float mdx = mouseDx, mdy = mouseDy;
+                mouseDx = 0;
+                mouseDy = 0;
+                if (mdx != 0 || mdy != 0) {
+                    float mg = 1200f * Math.max(0.1f, st.geti("mouse.sens", 100) / 100f);
+                    rx = (int) Math.max(-32767, Math.min(32767, rx + mdx * mg));
+                    ry = (int) Math.max(-32767, Math.min(32767, ry + mdy * mg * (st.getb("mouse.invy", false) ? -1f : 1f)));
+                }
+                int wb = 0;
+                if (wheelFrames > 0) {
+                    wb = wheelBits;
+                    wheelFrames--;
+                }
+                Native.setInput(overlay.buttons | padButtons | padAxisButtons | keyMask | kbBits | mouseBits | wb, lx, ly, rx, ry);
                 Native.run();
                 if (Native.shutdownRequested()) {
                     runOnUiThread(this::quit); // oyunun kendi menusunden "Quit Game"
@@ -499,6 +523,11 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             return true;
         }
 
+        // 1b) Harici klavye: hazir esleme
+        if (e.getDevice() != null && e.getDevice().getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC
+                && (e.getSource() & InputDevice.SOURCE_GAMEPAD) != InputDevice.SOURCE_GAMEPAD
+                && keyboardKey(e)) return true;
+
         // 2) Atanmamis kumanda dugmeleri: varsayilan eslestirme
         int src = e.getSource();
         boolean pad = (src & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
@@ -515,6 +544,97 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         return super.dispatchKeyEvent(e);
     }
 
+    private void setBit(boolean down, int bit) {
+        kbBits = down ? (kbBits | bit) : (kbBits & ~bit);
+    }
+
+    private void setDir(boolean down, int d) {
+        kbDirs = down ? (kbDirs | d) : (kbDirs & ~d);
+    }
+
+    /** WASD yuruyus, oklar menu/yon, Enter tamam, Esc menu, bosluk kullan, Ctrl ates, 1-9 silah. */
+    private boolean keyboardKey(KeyEvent e) {
+        boolean dn = e.getAction() == KeyEvent.ACTION_DOWN;
+        int c = e.getKeyCode();
+        switch (c) {
+            case KeyEvent.KEYCODE_W: setDir(dn, 1); return true;
+            case KeyEvent.KEYCODE_S: setDir(dn, 2); return true;
+            case KeyEvent.KEYCODE_A: setDir(dn, 4); return true;
+            case KeyEvent.KEYCODE_D: setDir(dn, 8); return true;
+            case KeyEvent.KEYCODE_DPAD_UP: setBit(dn, Actions.UP); return true;
+            case KeyEvent.KEYCODE_DPAD_DOWN: setBit(dn, Actions.DOWN); return true;
+            case KeyEvent.KEYCODE_DPAD_LEFT: setBit(dn, Actions.LEFT); return true;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: setBit(dn, Actions.RIGHT); return true;
+            case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_NUMPAD_ENTER: setBit(dn, Actions.A); return true;
+            case KeyEvent.KEYCODE_ESCAPE: setBit(dn, Actions.START); return true;
+            case KeyEvent.KEYCODE_TAB: setBit(dn, Actions.SELECT); return true;
+            case KeyEvent.KEYCODE_SPACE:
+            case KeyEvent.KEYCODE_E: setBit(dn, Actions.mask(kind, "use")); return true;
+            case KeyEvent.KEYCODE_CTRL_LEFT:
+            case KeyEvent.KEYCODE_CTRL_RIGHT: setBit(dn, Actions.R2); return true;
+            case KeyEvent.KEYCODE_SHIFT_LEFT:
+            case KeyEvent.KEYCODE_SHIFT_RIGHT: setBit(dn, Actions.mask(kind, "run")); return true;
+            default:
+                if (c >= KeyEvent.KEYCODE_1 && c <= KeyEvent.KEYCODE_9) {
+                    if (dn && e.getRepeatCount() == 0) Native.tapKey('1' + (c - KeyEvent.KEYCODE_1));
+                    return true;
+                }
+                return false;
+        }
+    }
+
+    // ---- mouse ----
+    private boolean captured;
+
+    @SuppressWarnings("NewApi")
+    private void grabMouse() {
+        if (Build.VERSION.SDK_INT < 26 || captured) return;
+        surface.setFocusable(true);
+        surface.setFocusableInTouchMode(true);
+        surface.requestFocus();
+        surface.setOnCapturedPointerListener((v, ev) -> {
+            mouseDx += ev.getX();
+            mouseDy += ev.getY();
+            int b = ev.getButtonState();
+            int bits = 0;
+            if ((b & MotionEvent.BUTTON_PRIMARY) != 0) bits |= Actions.R2;
+            if ((b & MotionEvent.BUTTON_SECONDARY) != 0) bits |= Actions.mask(kind, "use");
+            mouseBits = bits;
+            float sc = ev.getAxisValue(MotionEvent.AXIS_VSCROLL);
+            if (sc != 0) {
+                wheelBits = Actions.mask(kind, sc > 0 ? "prev" : "next");
+                wheelFrames = 3;
+            }
+            return true;
+        });
+        surface.requestPointerCapture();
+        captured = true;
+    }
+
+    @SuppressWarnings("NewApi")
+    private void freeMouse() {
+        if (Build.VERSION.SDK_INT >= 26 && surface != null) surface.releasePointerCapture();
+        captured = false;
+        mouseBits = 0;
+    }
+
+    @Override
+    public void onPointerCaptureChanged(boolean has) {
+        captured = has;
+        if (!has) mouseBits = 0;
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent e) {
+        if ((e.getSource() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE
+                && e.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) {
+            grabMouse();
+            return true;
+        }
+        return super.dispatchTouchEvent(e);
+    }
+
     private static int axis(MotionEvent e, int a) {
         float v = e.getAxisValue(a);
         return Math.abs(v) < 0.12f ? 0 : (int) (v * 32767f);
@@ -522,6 +642,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
     @Override
     public boolean dispatchGenericMotionEvent(MotionEvent e) {
+        if ((e.getSource() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE) {
+            grabMouse();
+            return true;
+        }
         if ((e.getSource() & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
                 && e.getAction() == MotionEvent.ACTION_MOVE) {
             padLx = axis(e, MotionEvent.AXIS_X);

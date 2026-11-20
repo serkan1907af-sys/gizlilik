@@ -195,6 +195,13 @@ public class SettingsActivity extends Activity {
         note(gy, "Açınca telefonu hafifçe sağa-sola çevirerek dönersin, yukarı-aşağı eğerek (Quake'te) yukarı-aşağı bakarsın. "
                 + "Çubuk da çalışmaya devam eder, ikisi toplanır. Yönler ters çıkarsa yukarıdaki anahtarlarla düzelt.");
 
+        LinearLayout ms = card("Harici mouse ve klavye");
+        seekRow(ms, "Mouse hassasiyeti", "mouse.sens", 20, 400, 100);
+        switchRow(ms, "Mouse dikey yönü ters çevir", "mouse.invy", false);
+        note(ms, "Mouse: hareket ettirince bakarsın, sol tık ateş, sağ tık kullan/zıpla, tekerlek silah değiştirir. "
+                + "Klavye: W A S D yürü, oklar menüde gezinir, Enter tamam, Esc menü, Boşluk veya E kullan, Ctrl ateş, Shift koş, 1–9 silah seç, Tab harita. "
+                + "Ayarlarda tuş atadıysan o tuş atamanı kullanır.");
+
         // ---- yerlesim ----
         LinearLayout l = card("Ekran tuşlarının yerleşimi");
         for (String k : Actions.ALL_KINDS)
