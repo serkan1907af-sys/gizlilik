@@ -141,14 +141,14 @@ final class Actions {
     // ---- ekran tuslari ----
     static String[] ctlIds(String kind) {
         if (quake(kind))
-            return new String[]{"stick", "fire", "use", "sl", "sr", "fire2", "prev", "next", "map", "menu", "wpn", "kbd"};
+            return new String[]{"stick", "fire", "use", "sl", "sr", "fire2", "prev", "next", "map", "menu", "wpn", "kbd", "back"};
         if (hexen(kind))
             return new String[]{"stick", "fire", "use", "run", "jump", "sl", "sr", "fire2", "prev", "next",
-                    "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd"};
+                    "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd", "back"};
         if (heretic(kind))
             return new String[]{"stick", "fire", "use", "run", "sl", "sr", "fire2", "prev", "next",
-                    "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd"};
-        return new String[]{"stick", "fire", "use", "run", "sl", "sr", "fire2", "prev", "next", "map", "menu", "wpn", "kbd"};
+                    "inv_l", "item", "inv_r", "map", "menu", "wpn", "kbd", "back"};
+        return new String[]{"stick", "fire", "use", "run", "sl", "sr", "fire2", "prev", "next", "map", "menu", "wpn", "kbd", "back"};
     }
 
     static boolean isPill(String id) {
@@ -160,7 +160,8 @@ final class Actions {
             case "inv_l":
             case "inv_r":
             case "item":
-            case "kbd": return true;
+            case "kbd":
+            case "back": return true;
             default: return false;
         }
     }
@@ -168,7 +169,7 @@ final class Actions {
     /** Ekran tusunun tetikledigi islev. */
     static String ctlAction(String id) {
         if (id.equals("fire2")) return "fire";
-        if (id.equals("stick") || id.equals("wpn") || id.equals("kbd")) return null;
+        if (id.equals("stick") || id.equals("wpn") || id.equals("kbd") || id.equals("back")) return null;
         return id;
     }
 
@@ -189,6 +190,7 @@ final class Actions {
             case "inv_r": return "EŞYA ›";
             case "item": return "KULLAN";
             case "kbd": return "KLAVYE";
+            case "back": return "◀ GERİ";
             case "wpn": return "SİLAH";
             default: return "ÇUBUK";
         }
@@ -199,6 +201,7 @@ final class Actions {
             case "stick": return "Hareket çubuğu";
             case "fire2": return "Ateş (ikinci tuş)";
             case "kbd": return "Klavye düğmesi";
+            case "back": return "Geri düğmesi (menüden çık)";
             case "wpn": return "Silah seçme şeridi (1, 2, 3…)";
             default: return label(kind, id);
         }

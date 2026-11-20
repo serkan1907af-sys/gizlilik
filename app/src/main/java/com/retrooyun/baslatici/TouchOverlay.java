@@ -206,9 +206,10 @@ public class TouchOverlay extends View {
             case "next": return new float[]{88 * d, 22 * d, 0};
             case "menu": return new float[]{144 * d, 22 * d, 0};
             case "kbd": return new float[]{200 * d, 22 * d, 0};
-            case "inv_l": return new float[]{32 * d, 56 * d, 0};
-            case "item": return new float[]{88 * d, 56 * d, 0};
-            case "inv_r": return new float[]{144 * d, 56 * d, 0};
+            case "back": return new float[]{32 * d, 56 * d, 0};
+            case "inv_l": return new float[]{32 * d, 90 * d, 0};
+            case "item": return new float[]{88 * d, 90 * d, 0};
+            case "inv_r": return new float[]{144 * d, 90 * d, 0};
             default: return new float[]{256 * d, 22 * d, 0}; // map
         }
     }
@@ -267,7 +268,7 @@ public class TouchOverlay extends View {
             c.mask = Actions.mask(kind, c.action);
             c.mode = MODE_GAME;
             c.act = id.equals("menu") ? ACT_OPEN_MENU : id.equals("kbd") ? ACT_OPEN_KBD : ACT_NONE;
-            c.key = Actions.keyFor(kind, c.action);
+            c.key = id.equals("back") ? 27 : Actions.keyFor(kind, c.action);
             c.strip = id.equals("wpn");
             c.n = Actions.weaponCount(kind);
             c.round = !Actions.isPill(id) && !c.strip;

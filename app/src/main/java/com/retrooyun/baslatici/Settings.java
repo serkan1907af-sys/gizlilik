@@ -123,7 +123,7 @@ final class Settings {
         if (name.equals("sade")) {
             for (String id : Actions.ctlIds(kind)) {
                 boolean on = id.equals("stick") || id.equals("fire") || id.equals("use") || id.equals("menu")
-                        || id.equals("prev") || id.equals("next");
+                        || id.equals("prev") || id.equals("next") || id.equals("back");
                 setVisible(kind, id, on);
             }
         } else if (name.equals("cok")) {
