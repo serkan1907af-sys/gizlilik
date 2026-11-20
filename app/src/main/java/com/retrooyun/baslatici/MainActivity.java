@@ -138,6 +138,8 @@ public class MainActivity extends Activity {
         content.addView(button("⚙  Ayarlar: tuşlar, dokunmatik, düzen", false,
                 v -> startActivity(new Intent(this, SettingsActivity.class))));
 
+        content.addView(button("?  Oyun dosyalarını nereden alırım?", false, v -> showFilesHelp()));
+
         // ---- DOOM ----
         LinearLayout doom = section("DOOM");
         File[] wads = Games.doomDir(this).listFiles((d, n) -> n.toLowerCase(Locale.ROOT).endsWith(".wad"));
@@ -201,6 +203,38 @@ public class MainActivity extends Activity {
                 12, DIM, false);
         foot.setPadding(0, dp(22), 0, 0);
         content.addView(foot);
+    }
+
+    private void openLink(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception e) {
+            setStatus("Tarayıcı açılamadı.");
+        }
+    }
+
+    private void showFilesHelp() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(18), dp(8), dp(18), dp(4));
+        TextView t = new TextView(this);
+        t.setTextSize(14);
+        t.setText("Uygulama hiçbir ticari oyun dosyası içermez. Freedoom ücretsiz ve içinde hazır gelir.\n\n"
+                + "DOOM / HERETIC / HEXEN\nOyunun .wad dosyasını (doom.wad, doom2.wad, heretic.wad, hexen.wad) telefona at, "
+                + "\"Kendi WAD dosyanı ekle\" ile seç.\n\n"
+                + "QUAKE\nTelefonda \"id1\" adlı bir klasör aç, içine oyunun pak0.pak (ve varsa pak1.pak) dosyasını koy. "
+                + "Sonra \"Quake klasörünü seç\" ile o klasörü göster.\n\n"
+                + "Oyunları satın alıp dosyalarını kendi bilgisayarından telefona aktarabilirsin. "
+                + "Aşağıdaki bağlantılar tarayıcında açılır; uygulama internete bağlanmaz.");
+        box.addView(t);
+        box.addView(button("Freedoom (ücretsiz oyun)", false, v -> openLink("https://freedoom.github.io/")));
+        box.addView(button("Steam'de ara: Doom / Quake / Heretic / Hexen", false,
+                v -> openLink("https://store.steampowered.com/search/?term=quake%20doom%20heretic%20hexen")));
+        box.addView(button("GOG'da ara", false, v -> openLink("https://www.gog.com/en/games?query=doom")));
+        android.widget.ScrollView sv = new android.widget.ScrollView(this);
+        sv.addView(box);
+        new AlertDialog.Builder(this).setTitle("Oyun dosyaları").setView(sv)
+                .setPositiveButton("Kapat", null).show();
     }
 
     private void play(String kind, String path) {
