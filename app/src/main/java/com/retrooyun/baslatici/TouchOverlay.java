@@ -105,7 +105,34 @@ public class TouchOverlay extends View {
         menuKnown = true;
         if (menuOn == open) return;
         menuOn = open;
-        post(this::refreshFire);
+        post(() -> {
+            if (menuOn) { // menuye girildi: cubuk ve bakis birakilir
+                stickId = -1;
+                lookId = -1;
+                publish();
+            }
+            refreshFire();
+        });
+    }
+
+    /** Menudeyken yalnizca TAMAM, GERI, yon tuslari, MENU ve KLAVYE gorunur. */
+    private boolean inMenuScreen() {
+        return menuKnown && menuOn && !editMode;
+    }
+
+    private boolean hiddenInMenu(Ctl c) {
+        if (!inMenuScreen()) return false;
+        switch (c.id) {
+            case "fire":
+            case "use":
+            case "menu":
+            case "kbd":
+            case "dp_up":
+            case "dp_down":
+            case "dp_left":
+            case "dp_right": return false;
+            default: return true;
+        }
     }
 
     /** Sagdaki ates dugmesi: oyunda ATES, menu acikken TAMAM. */
@@ -448,7 +475,7 @@ public class TouchOverlay extends View {
     private void down(int id, float x, float y) {
         for (int i = controls.size() - 1; i >= 0; i--) {
             Ctl c = controls.get(i);
-            if (c.mode != mode || !c.visible || c.id.equals("stick") || !hit(c, x, y)) continue;
+            if (c.mode != mode || !c.visible || hiddenInMenu(c) || c.id.equals("stick") || !hit(c, x, y)) continue;
             c.pressed = true;
             pointerCtl.put(id, c);
             if (c.strip) {
@@ -472,14 +499,18 @@ public class TouchOverlay extends View {
                     if (menuOn && !Actions.quake(kind)) Native.tapKey(c.id.equals("dp_up") ? 273 : 274); // Doom menusu: ok tuslari
                     if (menuOn) postDelayed(dpHoldRun, 350);
                     break;
+                case "dp_left":
+                case "dp_right":
+                    if (menuOn) { // menude deger azalt / arttir
+                        if (!Actions.quake(kind)) Native.tapKey(c.id.equals("dp_left") ? 276 : 275);
+                    } else leaveMenu();
+                    break;
                 case "use": // menude GERI: Quake'te B dugmesi (publish), digerlerinde Backspace
                     if (menuOn && !Actions.quake(kind)) Native.tapKey(8);
                     leaveMenu();
                     break;
                 case "jump":
                 case "run":
-                case "dp_left":
-                case "dp_right":
                     leaveMenu();
                     break;
                 default:
@@ -489,7 +520,7 @@ public class TouchOverlay extends View {
             else if (c.act == ACT_CLOSE_MENU) mode = MODE_GAME;
             return;
         }
-        if (mode != MODE_GAME) return;
+        if (mode != MODE_GAME || inMenuScreen()) return;
         leaveMenu(); // cubuk / bakis kullanildi: oyundasin
         boolean left = x < getWidth() * 0.45f;
         if (left) {
@@ -649,6 +680,10 @@ public class TouchOverlay extends View {
                 if (Actions.quake(kind)) b |= Actions.B; // Quake menusunde bir geri
                 continue;
             }
+            if (menuOn && Actions.quake(kind)) { // Quake menusunde ◀ ▶ degeri azaltir / arttirir
+                if (c.id.equals("dp_left")) b |= Actions.LEFT;
+                else if (c.id.equals("dp_right")) b |= Actions.RIGHT;
+            }
             b |= c.mask;
             if ("sl".equals(c.action)) strafe -= 32767;
             else if ("sr".equals(c.action)) strafe += 32767;
@@ -704,6 +739,7 @@ public class TouchOverlay extends View {
 
     /** Ekrandaki yon tuslari: ileri / geri / saga don / sola don. */
     private void applyDpad() {
+        if (menuOn) return; // menude yon tuslari yurutmez / dondurmez
         for (Ctl c : controls) {
             if (!c.pressed) continue;
             switch (c.id) {
@@ -803,10 +839,10 @@ public class TouchOverlay extends View {
             cv.drawRect(0, getHeight() * 0.40f - 6 * d, getWidth(), getHeight(), fill);
         }
         for (Ctl c : controls) {
-            if (c.mode != mode || !c.visible || c.id.equals("stick")) continue;
+            if (c.mode != mode || !c.visible || hiddenInMenu(c) || c.id.equals("stick")) continue;
             drawCtl(cv, c, false, false);
         }
-        if (mode != MODE_GAME) return;
+        if (mode != MODE_GAME || inMenuScreen()) return;
 
         Ctl sc = byId("stick");
         float R = sc != null ? sc.r : 70 * d;
