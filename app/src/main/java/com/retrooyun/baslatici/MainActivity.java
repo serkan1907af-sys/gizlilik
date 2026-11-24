@@ -50,6 +50,7 @@ public class MainActivity extends Activity {
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(18), dp(40), dp(18), dp(28));
         sv.addView(content, new ScrollView.LayoutParams(-1, -2));
+        sv.setFitsSystemWindows(true); // Android 16 (API 36): ekran kenardan kenara; durum cubugunun altina girmesin
         setContentView(sv);
 
         status = new TextView(this);
