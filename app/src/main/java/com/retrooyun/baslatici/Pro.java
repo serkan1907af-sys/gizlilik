@@ -103,9 +103,10 @@ final class Pro {
                 .setProductList(Collections.singletonList(QueryProductDetailsParams.Product.newBuilder()
                         .setProductId(PRODUCT_ID).setProductType(BillingClient.ProductType.INAPP).build()))
                 .build();
-        client.queryProductDetailsAsync(q, (r, list) -> {
-            if (r.getResponseCode() == BillingClient.BillingResponseCode.OK && list != null && !list.isEmpty())
-                details = list.get(0);
+        client.queryProductDetailsAsync(q, (r, result) -> {
+            if (r.getResponseCode() != BillingClient.BillingResponseCode.OK || result == null) return;
+            List<ProductDetails> list = result.getProductDetailsList();
+            if (list != null && !list.isEmpty()) details = list.get(0);
         });
     }
 

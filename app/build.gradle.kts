@@ -10,8 +10,8 @@ android {
         applicationId = "com.retrooyun.baslatici"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.8"
+        versionCode = 4
+        versionName = "0.8.1"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 
@@ -51,5 +51,5 @@ android {
 }
 
 dependencies {
-    implementation("com.android.billingclient:billing:7.1.1")
+    implementation("com.android.billingclient:billing:8.0.0")
 }
