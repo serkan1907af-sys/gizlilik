@@ -90,7 +90,7 @@ jobs:
           echo "RETRO_KS_PASS=retrotest123" >> "$GITHUB_ENV"
 
       - name: APK derle
-        run: gradle assembleRelease --no-daemon --stacktrace
+        run: gradle assembleRelease bundleRelease --no-daemon --stacktrace
 
       - name: APK icerigini kontrol et
         run: |
@@ -107,10 +107,11 @@ jobs:
       - name: APK'yi retro-apk dalina koy
         run: |
           mkdir /tmp/cikti && cp app/build/outputs/apk/release/app-release.apk /tmp/cikti/RetroOyun.apk
+          cp app/build/outputs/bundle/release/app-release.aab /tmp/cikti/RetroOyun.aab
           cd /tmp/cikti
           git init -q -b retro-apk
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
-          git add RetroOyun.apk
+          git add RetroOyun.apk RetroOyun.aab
           git commit -qm "APK ${{ github.sha }}"
           for i in 1 2 3 4 5; do git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" retro-apk && break; sleep 20; done
