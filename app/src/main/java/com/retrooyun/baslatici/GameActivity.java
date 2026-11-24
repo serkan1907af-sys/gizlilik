@@ -68,6 +68,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     // jiroskop: telefonu cevirerek bakma / nisan alma
     private SensorManager sensorManager;
     private volatile boolean gyroOn = false;
+    private boolean pro;
     private volatile int gyroRx, gyroRy;
     private volatile float gravX, gravY, gravZ;
     private final SensorEventListener gravListener = new SensorEventListener() {
@@ -129,9 +130,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         st = Settings.load(this);
+        pro = Pro.has(this);
         kind = getIntent().getStringExtra(EXTRA_KIND);
         path = getIntent().getStringExtra(EXTRA_PATH);
-        if (kind == null || path == null) {
+        if (kind == null || path == null || (!Games.KIND_DOOM.equals(kind) && !Pro.has(this))) {
             finish();
             return;
         }
@@ -207,7 +209,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         inputManager = (InputManager) getSystemService(INPUT_SERVICE);
         if (inputManager != null) inputManager.registerInputDeviceListener(devListener, null);
         refreshPads();
-        gyroOn = st.getb("gyro2", false);
+        gyroOn = st.getb("gyro2", false) && Pro.has(this);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (gyroOn && sensorManager != null) {
             Sensor g = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -279,7 +281,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                     if (which == 1) {
                         startActivity(new Intent(this, SettingsActivity.class));
                     } else if (which == 2) {
-                        startActivity(new Intent(this, LayoutEditorActivity.class).putExtra("kind", kind));
+                        if (Pro.check(this, "Tuş düzeni düzenleyicisi"))
+                            startActivity(new Intent(this, LayoutEditorActivity.class).putExtra("kind", kind));
                     } else if (which == 3) {
                         new AlertDialog.Builder(this)
                                 .setMessage("Oyundan çıkılsın mı?\n(Oyunun kendi menüsünden kaydetmediğin ilerleme kaybolur.)")
@@ -539,6 +542,9 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         int action = e.getAction();
         if (code == KeyEvent.KEYCODE_BACK || (action != KeyEvent.ACTION_DOWN && action != KeyEvent.ACTION_UP))
             return super.dispatchKeyEvent(e);
+        // Ucretsiz surumde yalnizca telefonun ses tuslari; kumanda / klavye Pro
+        if (!pro && code != KeyEvent.KEYCODE_VOLUME_UP && code != KeyEvent.KEYCODE_VOLUME_DOWN)
+            return super.dispatchKeyEvent(e);
 
         // 1) Kullanicinin atadigi tuslar (ses tuslari, kumanda dugmeleri, klavye)
         if (action == KeyEvent.ACTION_DOWN) {
@@ -624,6 +630,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
     @SuppressWarnings("NewApi")
     private void grabMouse() {
+        if (!pro) return;
         if (Build.VERSION.SDK_INT < 26 || captured) return;
         surface.setFocusable(true);
         surface.setFocusableInTouchMode(true);
@@ -677,6 +684,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
     @Override
     public boolean dispatchGenericMotionEvent(MotionEvent e) {
+        if (!pro) return super.dispatchGenericMotionEvent(e); // kumanda ve mouse Pro
         if ((e.getSource() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE) {
             grabMouse();
             return true;

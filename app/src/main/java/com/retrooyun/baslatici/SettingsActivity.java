@@ -45,6 +45,27 @@ public class SettingsActivity extends Activity {
         super.onResume();
         // Yerlesim duzenleyicisinden donunce ayarlari tazele
         s = Settings.load(this);
+        Pro.init(this, this::build);
+    }
+
+    /** Ucretsiz surumde Pro kartlari soluk gorunur; dokununca Pro penceresi acilir. */
+    private void lock(LinearLayout c, String what) {
+        if (Pro.has(this)) return;
+        c.setAlpha(0.45f);
+        TextView tag = text("🔒 Pro", 13, ACCENT, true);
+        c.addView(tag, 1);
+        lockTouch(c, what);
+    }
+
+    private void lockTouch(android.view.View v, String what) {
+        v.setOnTouchListener((x, e) -> {
+            if (e.getAction() == android.view.MotionEvent.ACTION_UP) Pro.check(this, what);
+            return true;
+        });
+        if (v instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) lockTouch(g.getChildAt(i), what);
+        }
     }
 
     private int dp(float v) {
@@ -167,6 +188,8 @@ public class SettingsActivity extends Activity {
         content.removeAllViews();
         content.addView(text("AYARLAR", 26, ACCENT, true));
         content.addView(button("←  Geri", false, v -> finish()));
+        if (Pro.has(this)) content.addView(text("★  Retro Oyun Pro etkin", 14, ACCENT, true));
+        else content.addView(button("★  Pro'ya geç", true, v -> Pro.check(this, "Kilitli ayarlar")));
 
         // ---- dokunmatik ----
         LinearLayout t = card("Dokunmatik kontroller");
@@ -196,6 +219,7 @@ public class SettingsActivity extends Activity {
         switchRow(gy, "Dikey yönü ters çevir (Quake)", "gyro.invy", false);
         note(gy, "Açınca telefonu sağa çevirince oyuncu sağa, sola çevirince sola döner; telefonu nasıl tuttuğun fark etmez. Yukarı-aşağı bakma ayrı bir anahtarla açılır. "
                 + "Çubuk da çalışmaya devam eder, ikisi toplanır. Yönler ters çıkarsa yukarıdaki anahtarlarla düzelt.");
+        lock(gy, "Jiroskopla nişan alma");
 
         LinearLayout ms = card("Harici mouse ve klavye");
         seekRow(ms, "Mouse hassasiyeti", "mouse.sens", 20, 400, 100);
@@ -203,11 +227,13 @@ public class SettingsActivity extends Activity {
         note(ms, "Mouse: hareket ettirince bakarsın, sol tık ateş, sağ tık kullan/zıpla, tekerlek silah değiştirir. "
                 + "Klavye: W A S D yürü, oklar menüde gezinir, Enter tamam, Esc menü, Boşluk veya E kullan, Ctrl ateş, Shift koş, 1–9 silah seç, Tab harita. "
                 + "Ayarlarda tuş atadıysan o tuş atamanı kullanır.");
+        lock(ms, "Harici mouse ve klavye");
 
         // ---- yerlesim ----
         LinearLayout l = card("Ekran tuşlarının yerleşimi");
         for (String k : Actions.ALL_KINDS)
             l.addView(button(Actions.kindName(k) + " düzenini değiştir", true, v -> edit(k)));
+        lock(l, "Tuş düzeni düzenleyicisi");
         note(l, "Tuşları sürükle, büyüt/küçült, göster/gizle. Silah seçme şeridi (1, 2, 3…) ve ekran klavyesi düğmesi de buradan taşınır. Hazır düzenler (Sade, Klasik, Çok tuşlu) ve kendi kayıtlı düzenlerin burada.");
 
         // ---- fiziksel tuslar ----
@@ -255,6 +281,7 @@ public class SettingsActivity extends Activity {
             s.save();
             build();
         }));
+        lock(c, "Kumanda ve klavye tuş ataması");
         note(c, "Bir işleve dokun, sonra atamak istediğin tuşa bas: ses tuşu, kumanda düğmesi veya klavye tuşu. "
                 + "Aynı tuş başka işlevdeyse ondan alınır. Bir işleve birden fazla tuş atanabilir.");
     }

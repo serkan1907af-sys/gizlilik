@@ -27,6 +27,10 @@ public class LayoutEditorActivity extends Activity implements TouchOverlay.EditL
         super.onCreate(b);
         kind = getIntent().getStringExtra("kind");
         if (kind == null) kind = Games.KIND_DOOM;
+        if (!Pro.has(this)) { // duzenleyici Pro ozelligi
+            finish();
+            return;
+        }
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF1B1B22);

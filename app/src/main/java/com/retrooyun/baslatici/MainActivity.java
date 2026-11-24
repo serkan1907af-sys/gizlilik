@@ -57,6 +57,7 @@ public class MainActivity extends Activity {
         status.setTextColor(DIM);
         status.setTextSize(14);
         render();
+        Pro.init(this, this::render);
 
         // Ilk acilista motor verisi ve gomulu Freedoom hazirlanir.
         busy = true;
@@ -140,6 +141,12 @@ public class MainActivity extends Activity {
                 v -> startActivity(new Intent(this, SettingsActivity.class))));
 
         content.addView(button("?  Oyun dosyalarını nereden alırım?", false, v -> showFilesHelp()));
+        if (Pro.has(this)) {
+            content.addView(text("★  Retro Oyun Pro etkin", 14, ACCENT, true));
+        } else {
+            content.addView(button("★  Pro'ya geç: Quake, Heretic/Hexen, kumanda ve daha fazlası", true,
+                    v -> Pro.check(this, "Bu özellikler")));
+        }
 
         // ---- DOOM ----
         LinearLayout doom = section("DOOM");
@@ -152,7 +159,10 @@ public class MainActivity extends Activity {
                 String label = "▶  " + f.getName() + "   (" + (f.length() / (1024 * 1024)) + " MB)"
                         + (bundled ? "\nÜcretsiz Freedoom – hemen oyna"
                         : wadKind.equals(Games.KIND_DOOM) ? "" : "\n" + Actions.kindName(wadKind));
+                boolean locked = !wadKind.equals(Games.KIND_DOOM) && !Pro.has(this);
+                if (locked) label += "   🔒 Pro";
                 Button bt = button(label, bundled, v -> play(wadKind, f.getPath()));
+                if (locked) bt.setAlpha(0.45f);
                 if (!bundled) {
                     bt.setOnLongClickListener(v -> {
                         new AlertDialog.Builder(this)
@@ -177,8 +187,12 @@ public class MainActivity extends Activity {
         doom.addView(h1);
 
         // ---- QUAKE ----
-        LinearLayout quake = section("QUAKE");
-        if (Games.quakeInstalled(this)) {
+        LinearLayout quake = section(Pro.has(this) ? "QUAKE" : "QUAKE   🔒 Pro");
+        if (!Pro.has(this)) {
+            Button qb = button("▶  Quake 1 (Pro)", false, v -> Pro.check(this, "Quake 1"));
+            qb.setAlpha(0.45f);
+            quake.addView(qb);
+        } else if (Games.quakeInstalled(this)) {
             quake.addView(button("▶  Quake 1'i oyna", true,
                     v -> play(Games.KIND_QUAKE, Games.quakePak0(this).getPath())));
             quake.addView(button("Dosyaları yeniden seç", false, v -> pickQuake()));
@@ -239,6 +253,8 @@ public class MainActivity extends Activity {
     }
 
     private void play(String kind, String path) {
+        if (!Games.KIND_DOOM.equals(kind)
+                && !Pro.check(this, Games.KIND_QUAKE.equals(kind) ? "Quake 1" : "Heretic ve Hexen")) return;
         if (!ready || busy) {
             setStatus("Bir saniye, hazırlık sürüyor…");
             return;
