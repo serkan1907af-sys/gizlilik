@@ -19,6 +19,7 @@ import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.QueryProductDetailsParams;
+import com.android.billingclient.api.QueryProductDetailsResult;
 import com.android.billingclient.api.QueryPurchasesParams;
 
 import java.util.ArrayList;
@@ -89,7 +90,8 @@ public final class ProManager implements PurchasesUpdatedListener {
         QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(prods).build();
         client.queryProductDetailsAsync(params, new ProductDetailsResponseListener() {
             @Override
-            public void onProductDetailsResponse(BillingResult result, List<ProductDetails> list) {
+            public void onProductDetailsResponse(BillingResult result, QueryProductDetailsResult qr) {
+                List<ProductDetails> list = qr == null ? null : qr.getProductDetailsList();
                 if (result.getResponseCode() == BillingClient.BillingResponseCode.OK && list != null) {
                     for (ProductDetails d : list) {
                         all.put(d.getProductId(), d);

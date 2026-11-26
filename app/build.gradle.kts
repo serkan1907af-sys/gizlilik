@@ -9,9 +9,9 @@ android {
     defaultConfig {
         applicationId = "com.tavlaoyunu.klasik"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 36
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     // İmza anahtarı depoya KONMAZ (depo herkese açık). Derleme sırasında ortam değişkenlerinden okunur:
@@ -44,5 +44,5 @@ android {
 
 dependencies {
     implementation("com.google.android.gms:play-services-ads:23.6.0")
-    implementation("com.android.billingclient:billing:7.1.1")
+    implementation("com.android.billingclient:billing:8.0.0")
 }
