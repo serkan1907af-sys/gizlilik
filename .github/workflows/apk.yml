@@ -35,8 +35,8 @@ jobs:
             echo "Sabit DENEME anahtari kullaniliyor (Play Store icin kullanma)"
           fi
           echo "TAVLA_KS_PATH=$RUNNER_TEMP/tavla.jks" >> "$GITHUB_ENV"
-      - name: APK derle
-        run: gradle assembleRelease --no-daemon --stacktrace
+      - name: APK ve AAB derle
+        run: gradle assembleRelease bundleRelease --no-daemon --stacktrace
       - name: APK'yi yukle
         uses: actions/upload-artifact@v4
         with:
@@ -44,11 +44,11 @@ jobs:
           path: app/build/outputs/apk/release/app-release.apk
       - name: APK'yi tavla-apk dalina koy
         run: |
-          mkdir /tmp/cikti && cp app/build/outputs/apk/release/app-release.apk /tmp/cikti/Tavla.apk
+          mkdir /tmp/cikti && cp app/build/outputs/apk/release/app-release.apk /tmp/cikti/Tavla.apk && cp app/build/outputs/bundle/release/app-release.aab /tmp/cikti/Tavla.aab
           cd /tmp/cikti
           git init -q -b tavla-apk
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
-          git add Tavla.apk
+          git add Tavla.apk Tavla.aab
           git commit -qm "APK ${{ github.sha }}"
           for i in 1 2 3 4 5; do git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" tavla-apk && break; sleep 20; done
