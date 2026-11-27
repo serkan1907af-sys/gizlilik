@@ -1,0 +1,10 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+# CI tarafindan indirilen / derlenen dosyalar
+app/src/main/jniLibs/
+app/src/main/assets/
+native/**/obj/
+native/**/libs/

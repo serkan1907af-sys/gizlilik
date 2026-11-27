@@ -1,0 +1,116 @@
+name: Retro Konsol APK olustur
+
+on:
+  push:
+    branches: [ konsol ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Emulator motorlarinin kaynaklarini indir (sabit surumler)
+        run: |
+          set -e
+          get() { # ad url sha
+            mkdir -p "$RUNNER_TEMP/$1"
+            git -C "$RUNNER_TEMP/$1" init -q
+            git -C "$RUNNER_TEMP/$1" fetch -q --depth 1 "$2" "$3"
+            git -C "$RUNNER_TEMP/$1" checkout -q FETCH_HEAD
+          }
+          get fceumm   https://github.com/libretro/libretro-fceumm.git fb919fb6fa881aaa6279b765d480220579e5c606
+          get bsnes    https://github.com/libretro/bsnes-mercury.git    79d7f9de218b6ffa65a80bbdc5828532bc239232
+          get gambatte https://github.com/libretro/gambatte-libretro.git b14881d382d251c75dcf465ccc9e0f1e1bb39ca9
+          get vbanext  https://github.com/libretro/vba-next.git         3368846492beb2632d8d6b013582abb3b720689e
+          # Gambatte: ag (netplay) ozelligi gereksiz
+          sed -i 's/^HAVE_NETWORK := 1/HAVE_NETWORK := 0/' "$RUNNER_TEMP/gambatte/libgambatte/libretro/jni/Android.mk"
+          grep -q 'HAVE_NETWORK := 0' "$RUNNER_TEMP/gambatte/libgambatte/libretro/jni/Android.mk"
+
+      - name: Native kutuphaneleri derle (NDK)
+        run: |
+          set -e
+          NDK="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-$(ls -d "${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"/ndk/* | sort -V | tail -1)}}"
+          echo "NDK: $NDK"
+          OUT="$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a"
+          mkdir -p "$OUT"
+          COMMON="APP_ABI=arm64-v8a APP_PLATFORM=android-24 APP_SUPPORT_FLEXIBLE_PAGE_SIZES=true"
+
+          build_core() { # ad jni-klasoru cikti-adi
+            echo "::group::$1"
+            "$NDK/ndk-build" -C "$RUNNER_TEMP/$1/$2" $COMMON -j4
+            cp "$RUNNER_TEMP/$1/$2/../libs/arm64-v8a/libretro.so" "$OUT/lib$1_libretro.so" 2>/dev/null \
+              || cp "$(find "$RUNNER_TEMP/$1" -path '*libs/arm64-v8a/libretro.so' | head -1)" "$OUT/lib$1_libretro.so"
+            echo "::endgroup::"
+          }
+          build_core fceumm   jni
+          build_core bsnes    target-libretro/jni
+          build_core gambatte libgambatte/libretro/jni
+          build_core vbanext  libretro/jni
+
+          # NOT: ndk-build, cikis klasorundeki kendi uretmedigi .so dosyalarini siler.
+          # Bu yuzden ana program ayri klasore derlenir, sonra kopyalanir.
+          echo "::group::Ana program (frontend)"
+          "$NDK/ndk-build" -C native/frontend NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk \
+            NDK_APPLICATION_MK=./Application.mk NDK_LIBS_OUT="$RUNNER_TEMP/frontend-libs" \
+            NDK_OUT="$RUNNER_TEMP/ndk-frontend" $COMMON -j4
+          cp "$RUNNER_TEMP/frontend-libs/arm64-v8a/libretrohost.so" "$OUT/libretrohost.so"
+          echo "::endgroup::"
+
+          ls -la "$OUT"
+          for f in libretrohost.so libfceumm_libretro.so libbsnes_libretro.so libgambatte_libretro.so libvbanext_libretro.so; do
+            test -s "$OUT/$f" || { echo "EKSIK: $f"; exit 1; }
+          done
+
+      - name: Imza anahtari hazirla
+        run: |
+          cp ci/test-key.p12 "$RUNNER_TEMP/retro.jks"
+          echo "RETRO_KS_PATH=$RUNNER_TEMP/retro.jks" >> "$GITHUB_ENV"
+          echo "RETRO_KS_PASS=retrotest123" >> "$GITHUB_ENV"
+
+      - name: Deneme APK (Pro acik)
+        run: |
+          PRO_UNLOCKED=1 gradle assembleRelease --no-daemon --stacktrace
+          mkdir -p "$RUNNER_TEMP/cikti"
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/cikti/RetroKonsol-Pro-deneme.apk"
+
+      - name: Magaza paketi (Pro satin alma ile)
+        run: |
+          gradle clean --no-daemon
+          PRO_UNLOCKED=0 gradle assembleRelease bundleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/cikti/RetroKonsol-magaza.apk"
+          cp app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/cikti/RetroKonsol.aab"
+
+      - name: APK icerigini kontrol et
+        run: |
+          unzip -l "$RUNNER_TEMP/cikti/RetroKonsol-Pro-deneme.apk" | grep -E "lib/arm64-v8a"
+          ls -la "$RUNNER_TEMP/cikti"
+
+      - name: APK'yi yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: RetroKonsol
+          path: ${{ runner.temp }}/cikti/*
+
+      - name: Dosyalari konsol-apk dalina koy
+        run: |
+          cd "$RUNNER_TEMP/cikti"
+          git init -q -b konsol-apk
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add .
+          git commit -qm "APK ${{ github.sha }}"
+          for i in 1 2 3 4 5; do git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" konsol-apk && break; sleep 20; done
